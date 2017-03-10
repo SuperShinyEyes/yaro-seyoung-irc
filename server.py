@@ -8,6 +8,7 @@ PORT = 8888 # Arbitrary non-privileged port
 connections = [] # Store all connectioins.
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print 'Socket created'
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 #Bind socket to local host and port
 try:
