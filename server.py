@@ -50,7 +50,7 @@ def close_client_connection(speaker_socket, speaker_port):
 
 
 #Function for handling connections. This will be used to create threads
-def clientthread(conn):
+def client_thread(conn):
     #Sending message to connected client
     conn.send('Welcome to the server. Type something and hit enter\n') #send only takes string
     client_port = connections[conn][1][1]
@@ -81,6 +81,6 @@ while 1:
     connections[conn_speaker] = (conn_listener, addr_speaker)
 
     #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-    start_new_thread(clientthread ,(conn_speaker,))
+    start_new_thread(client_thread ,(conn_speaker,))
 
 s.close()
