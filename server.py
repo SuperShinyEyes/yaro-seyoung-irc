@@ -31,6 +31,17 @@ print 'Socket now listening'
 def is_client_quitting(msg):
     return msg == "/quit"
 
+def propagate_msg(msg, sender=None):
+    if sender:
+        for c in connections.keys():
+            if c is not sender:
+                connections[c][0].sendall(msg)
+    else:
+        for c in connections.keys():
+            connections[c][0].sendall(msg)
+
+
+
 #Function for handling connections. This will be used to create threads
 def clientthread(conn):
     #Sending message to connected client
@@ -46,14 +57,11 @@ def clientthread(conn):
         if is_client_quitting(data):
             break
 
-        reply = '[%s]>>> %s' % (client_port, data)
+        msg = '[%s]>>> %s' % (client_port, data)
         if not data:
             break
 
-        for c in connections.keys():
-            if c is not conn:
-                connections[c][0].sendall(reply)
-
+        propagate_msg(msg, conn)
         # conn.sendall(reply)
 
     #came out of loop
@@ -62,9 +70,7 @@ def clientthread(conn):
     connections.pop(conn, None)
 
     msg = "Client %s left the channel." % (client_port)
-
-    for c in connections.keys():
-            connections[c][0].sendall(msg)
+    propagate_msg(msg)
     print(msg)
 
 #now keep speaker with the client
@@ -74,8 +80,7 @@ while 1:
     conn_speaker, addr_speaker = s.accept()
     print 'Connected with ' + addr_listener[0] + ':' + str(addr_listener[1])
     connections[conn_speaker] = (conn_listener, addr_speaker)
-    # connections_client_listener.append(conn_listener)
-    # connections_client_speaker.append(conn_speaker)
+    
     #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
     start_new_thread(clientthread ,(conn_speaker,))
 
