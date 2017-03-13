@@ -2,8 +2,18 @@
 from thread import *
 import socket   #for sockets
 import sys  #for exit
+import os
 
 WELCOME_MSG = ""
+CLOSE_MSG='/close'
+
+def is_close(data):
+    return data == CLOSE_MSG
+
+def close():
+    print("close()")
+    speaker_socket.close()
+    listener_socket.close()
 
 def listen_thread(conn):
     #Sending message to connected client
@@ -16,13 +26,17 @@ def listen_thread(conn):
         data = conn.recv(1024)
         reply = 'OK...' + data
 
-        if not data:
+        if not data or is_close(data):
             break
 
         print(data)
 
     #came out of loop
-    conn.close()
+    close()
+
+    # Better solution than this.
+    os._exit(1)
+
 
 #create an INET, STREAMing socket
 def create_socket():
@@ -66,12 +80,10 @@ while True:
     except socket.error:
         #Send failed
         print('Send failed')
+        close()
         sys.exit()
 
     except KeyboardInterrupt:
         speaker_socket.sendall("/quit")
+        close()
         break
-
-
-listener_socket.close()
-speaker_socket.close()
