@@ -38,8 +38,8 @@ def welcome():
     with open('welcome_msg') as f:
         print(f.read())
 
-listening_socket = create_socket()
-talking_socket = create_socket()
+listener_socket = create_socket()
+speaker_socket = create_socket()
 
 print('Socket Created')
 
@@ -48,38 +48,13 @@ port = 8888;
 # remote_ip = "10.100.57.138"
 remote_ip = "localhost"
 
-# try:
-#     remote_ip = socket.gethostbyname( host )
-#
-# except socket.gaierror:
-#     #could not resolve
-#     print 'Hostname could not be resolved. Exiting'
-#     sys.exit()
+listener_socket.connect((remote_ip , port))
+speaker_socket.connect((remote_ip , port))
 
-#Connect to remote server
-
-listening_socket.connect((remote_ip , port))
-talking_socket.connect((remote_ip , port))
-start_new_thread(listen_thread ,(listening_socket,))
+start_new_thread(listen_thread ,(listener_socket,))
 
 welcome()
 # print('Socket Connected to ' + host + ' on ip ' + remote_ip)
-
-#Send some data to remote server
-message = "GET / HTTP/1.1\r\n\r\n"
-
-# try :
-#     #Set the whole string
-#     talking_socket.sendall(message)
-# except socket.error:
-#     #Send failed
-#     print('Send failed')
-#     sys.exit()
-#
-# print('Message send successfully')
-
-
-
 
 #now keep talking with the client
 while True:
@@ -87,13 +62,16 @@ while True:
     try :
         message = raw_input(">>> ")
         #Set the whole string
-        talking_socket.sendall(message)
+        speaker_socket.sendall(message)
     except socket.error:
         #Send failed
         print('Send failed')
         sys.exit()
 
+    except KeyboardInterrupt:
+        speaker_socket.sendall("/quit")
+        break
 
 
-
-s.close()
+listener_socket.close()
+speaker_socket.close()

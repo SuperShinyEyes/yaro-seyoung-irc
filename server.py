@@ -28,18 +28,25 @@ print 'Socket bind complete'
 s.listen(10)
 print 'Socket now listening'
 
+def is_client_quitting(msg):
+    return msg == "/quit"
+
 #Function for handling connections. This will be used to create threads
 def clientthread(conn):
     #Sending message to connected client
     conn.send('Welcome to the server. Type something and hit enter\n') #send only takes string
+    client_port = connections[conn][1][1]
 
     #infinite loop so that function do not terminate and thread do not end.
     while True:
 
         #Receiving from client
         data = conn.recv(1024)
-        sender_port = connections[conn][1]
-        reply = '[%s]>>> %s' % (sender_port, data)
+
+        if is_client_quitting(data):
+            break
+
+        reply = '[%s]>>> %s' % (client_port, data)
         if not data:
             break
 
@@ -50,7 +57,15 @@ def clientthread(conn):
         # conn.sendall(reply)
 
     #came out of loop
+    connections[conn][0].close()
     conn.close()
+    connections.pop(conn, None)
+
+    msg = "Client %s left the channel." % (client_port)
+
+    for c in connections.keys():
+            connections[c][0].sendall(msg)
+    print(msg)
 
 #now keep speaker with the client
 while 1:
