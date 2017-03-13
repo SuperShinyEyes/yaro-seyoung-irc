@@ -33,7 +33,7 @@ def clientthread(conn):
 
         #Receiving from client
         data = conn.recv(1024)
-        reply = 'OK...' + data
+        reply = '[Reply]' + data
         if not data:
             break
 
