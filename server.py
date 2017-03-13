@@ -6,11 +6,10 @@ HOST = ''   # Symbolic name meaning all available interfaces
 PORT = 8888 # Arbitrary non-privileged port
 
 '''
-connections = {0: (speaker, listener)}
+connections = {speaker_socket: (listener_socket, (address, port) )}
 '''
 connections = {}
-connections_client_listening = [] # Store all connectioins.
-connections_client_speaker = [] # Store all connectioins.
+
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print 'Socket created'
 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -40,6 +39,14 @@ def propagate_msg(msg, sender=None):
         for c in connections.keys():
             connections[c][0].sendall(msg)
 
+def close_client_connection(speaker_socket, speaker_port):
+    connections[speaker_socket][0].close()
+    speaker_socket.close()
+    connections.pop(speaker_socket, None)
+
+    msg = "Client %s left the channel." % (speaker_port)
+    propagate_msg(msg)
+    print(msg)
 
 
 #Function for handling connections. This will be used to create threads
@@ -54,24 +61,16 @@ def clientthread(conn):
         #Receiving from client
         data = conn.recv(1024)
 
-        if is_client_quitting(data):
+        if not data or is_client_quitting(data):
             break
 
         msg = '[%s]>>> %s' % (client_port, data)
-        if not data:
-            break
 
         propagate_msg(msg, conn)
-        # conn.sendall(reply)
 
     #came out of loop
-    connections[conn][0].close()
-    conn.close()
-    connections.pop(conn, None)
+    close_client_connection(conn, client_port)
 
-    msg = "Client %s left the channel." % (client_port)
-    propagate_msg(msg)
-    print(msg)
 
 #now keep speaker with the client
 while 1:
@@ -80,7 +79,7 @@ while 1:
     conn_speaker, addr_speaker = s.accept()
     print 'Connected with ' + addr_listener[0] + ':' + str(addr_listener[1])
     connections[conn_speaker] = (conn_listener, addr_speaker)
-    
+
     #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
     start_new_thread(clientthread ,(conn_speaker,))
 
