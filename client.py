@@ -3,6 +3,7 @@ from thread import *
 import socket   #for sockets
 import sys  #for exit
 
+WELCOME_MSG = ""
 
 def listen_thread(conn):
     #Sending message to connected client
@@ -33,8 +34,13 @@ def create_socket():
 
     return s
 
+def welcome():
+    with open('welcome_msg') as f:
+        print(f.read())
+
 listening_socket = create_socket()
 talking_socket = create_socket()
+
 print('Socket Created')
 
 host = 'Aalto';
@@ -56,20 +62,21 @@ listening_socket.connect((remote_ip , port))
 talking_socket.connect((remote_ip , port))
 start_new_thread(listen_thread ,(listening_socket,))
 
-print('Socket Connected to ' + host + ' on ip ' + remote_ip)
+welcome()
+# print('Socket Connected to ' + host + ' on ip ' + remote_ip)
 
 #Send some data to remote server
 message = "GET / HTTP/1.1\r\n\r\n"
 
-try :
-    #Set the whole string
-    talking_socket.sendall(message)
-except socket.error:
-    #Send failed
-    print('Send failed')
-    sys.exit()
-
-print('Message send successfully')
+# try :
+#     #Set the whole string
+#     talking_socket.sendall(message)
+# except socket.error:
+#     #Send failed
+#     print('Send failed')
+#     sys.exit()
+#
+# print('Message send successfully')
 
 
 
