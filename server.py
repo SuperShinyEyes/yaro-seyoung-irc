@@ -1,7 +1,66 @@
 #!/usr/bin/env python3
 import socket
 import sys
-from _thread import *
+# from _thread import *
+import threading
+import logging
+import select
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='(%(threadName)-10s) %(message)s',
+)
+
+class YarongServerThread(threading.Thread):
+    """docstring for ."""
+    def __init__(self, group=None, target=None, name=None,
+                 args=(), kwargs=None, *, daemon=None):
+        super().__init__(group=group, target=target, name=name,
+                         daemon=daemon)
+        self.client_socket = kwargs["socket"]
+        self.thread_stop_event = kwargs["event"]
+        self.server = kwargs["server"]
+        self.client_port = kwargs["port"]
+
+    def is_client_quitting(self, msg):
+        return msg == YarongServer.QUIT_MSG
+
+
+    def listen(self):
+        #Sending message to client_connected client
+        timeout_in_sec = 3
+        self.client_socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
+
+        #infinite loop so that function do not terminate and thread do not end.
+        while not self.thread_stop_event.is_set():
+            ready = select.select([self.client_socket], [], [], timeout_in_sec)
+            #Receiving from client
+
+            if ready[0]:
+                data = self.client_socket.recv(1024)
+            else:
+                logging.debug("Not ready yet")
+                continue
+
+            if not data or self.is_client_quitting(data.decode()):
+                print("Client quits")
+
+                break
+
+            msg = '[%s]>>> %s' % (self.client_port, data.decode())
+
+            logging.debug("propagate")
+            self.server.propagate_msg(msg, self.client_socket)
+
+        #came out of loop
+        self.server.client_quits(self.client_socket, self.client_port)
+
+    def run(self):
+        logging.debug("Running")
+        self.listen()
+
+
+
 
 class YarongServer(object):
     HOST = ''   # Symbolic name meaning all available interfaces
@@ -14,14 +73,23 @@ class YarongServer(object):
         self.num_nodes = num_nodes
         '''
         client_sockets = {speaker_socket: (listener_socket, (address, port) )}
+
         '''
         self.client_sockets = {}
+        self.client_threads = []
         self.socket = None
         self.initialize_socket()
+        self.threads_stop_event = threading.Event()
 
 
     def initialize_socket(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+        # Set socket to non-blocking mode.
+        # Read "How to set timeout on python's socket recv method?":
+        # http://stackoverflow.com/a/2721734/3067013
+        # self.socket.setblocking(0)
+
         print('Socket created')
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.bind()
@@ -42,8 +110,6 @@ class YarongServer(object):
 
 
 
-    def is_client_quitting(self, msg):
-        return msg == YarongServer.QUIT_MSG
 
     def propagate_msg(self, msg, sender=None):
         if sender:
@@ -68,12 +134,14 @@ class YarongServer(object):
 
     def close_client_connection(self, speaker_socket, close_all=False):
         speaker_socket.close()
-        self.client_sockets[speaker_socket][0].close()
+        listener_socket = self.client_sockets[speaker_socket][0]
+        listener_socket.close()
+
         if not close_all:
             self.client_sockets.pop(speaker_socket, None)
 
     def close_all_client_sockets(self, ):
-        for (speaker_socket, v) in self.client_sockets.iteritems():
+        for (speaker_socket, v) in self.client_sockets.items():
             (listener_socket, _) = v
             listener_socket.sendall(YarongServer.CLOSE_MSG.encode())
             self.close_client_connection(speaker_socket, True)
@@ -110,22 +178,33 @@ class YarongServer(object):
         while True:
             try:
                 #wait to accept a connection - blocking call
-                conn_listener, addr_listener = self.socket.accept()
-                conn_speaker, addr_speaker = self.socket.accept()
-                print('Connected with ' + addr_listener[0] + ':' + str(addr_listener[1]))
-                self.client_sockets[conn_speaker] = (conn_listener, addr_speaker)
+                listener_socket, listener_address = self.socket.accept()
+                listener_socket.setblocking(0)
+                speaker_socket, speaker_address = self.socket.accept()
+                (listner_ip, listener_port) = listener_address
+                print('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
+                self.client_sockets[speaker_socket] = (listener_socket, speaker_address)
 
                 #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-                start_new_thread(self.client_thread ,(conn_speaker,))
+                thread_dict = {"socket":listener_socket, "port":listener_port, "event":self.threads_stop_event, "server":self}
+                thread = YarongServerThread(name=str(listener_port),kwargs=thread_dict)
+                thread.start()
+                # self.client_threads.append(thread)
+                # start_new_thread(self.client_thread ,(speaker_socket,))
             except KeyboardInterrupt:
-
                 break
 
         print("Close server socket")
+        self.close()
 
     def close(self):
         self.close_all_client_sockets()
         self.socket.close()
+        self.threads_stop_event.set()
+        print("Closing....")
+        import time
+        time.sleep(4)
+
 
 
 if __name__ == "__main__":
