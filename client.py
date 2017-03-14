@@ -17,58 +17,70 @@ logging.basicConfig(
     format='%(message)s',
 )
 
-def is_close(data):
-    return data == CLOSE_MSG
+class YarongClient(object):
+    """docstring for ."""
+    def __init__(self, host='', host_ip='localhost', host_port=8888, ):
+        super(, self).__init__()
+        self.host = host
+        self.host_ip = host_ip
+        self.host_port = host_port
+        self.listener_socket = self.create_socket()
+        self.speaker_socket = self.create_socket()
 
-def close_client(exit_event):
-    print("close_client(exit_event)")
-    speaker_socket.close()
-    listener_socket.close()
-    print("exiting listen_thread")
-    exit_event.set()
-
-def close_client_by_client(exit_event):
-    speaker_socket.sendall("/quit".encode())
-    close_client(exit_event)
-
-def listen_thread(conn, exit_event):
-    #Sending message to connected client
-    # conn.sendall('Welcome to the server. Type something and hit enter\n') #send only takes string
-
-    #infinite loop so that function do not terminate and thread do not end.
-    while True:
-
-        #Receiving from client
-        data = conn.recv(1024)
-
-        if not data or is_close(data.decode()):
-            break
-
-        logging.debug(data.decode())
-
-    #came out of loop
-    close_client(exit_event)
-
-    # Better solution than this.
-    #os._exit(1)
+    def establish_socket_connections(self):
+        self.listener_socket.connect((host_ip , host_port))
+        self.speaker_socket.connect((host_ip , host_port))
 
 
-#create an INET, STREAMing socket
-def create_socket():
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    except socket.error:
-        print('Failed to create socket')
-        sys.exit()
+    def is_close(self,data):
+        return data == CLOSE_MSG
 
-    return s
+    def close_client(self, exit_event):
+        print("close_client(exit_event)")
+        self.speaker_socket.close()
+        self.listener_socket.close()
+        print("exiting listen_thread")
+        exit_event.set()
 
-def welcome():
-    with open('welcome_msg') as f:
-        print(f.read())
+    def close_client_by_client(self, exit_event):
+        self.speaker_socket.sendall("/quit".encode())
+        self.close_client(exit_event)
 
-listener_socket = create_socket()
-speaker_socket = create_socket()
+    def listen_thread(self, conn, exit_event):
+        #Sending message to connected client
+        # conn.sendall('Welcome to the server. Type something and hit enter\n') #send only takes string
+
+        #infinite loop so that function do not terminate and thread do not end.
+        while True:
+
+            #Receiving from client
+            data = conn.recv(1024)
+
+            if not data or self.is_close(data.decode()):
+                break
+
+            logging.debug(data.decode())
+
+        #came out of loop
+        close_client(exit_event)
+
+        # Better solution than this.
+        #os._exit(1)
+
+
+    #create an INET, STREAMing socket
+    def create_socket(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error:
+            print('Failed to create socket')
+            sys.exit()
+
+        return s
+
+    def welcome(self):
+        with open('welcome_msg') as f:
+            print(f.read())
 
 print('Socket Created')
 
@@ -77,8 +89,6 @@ port = 8888;
 # remote_ip = "10.100.57.138"
 remote_ip = "localhost"
 
-listener_socket.connect((remote_ip , port))
-speaker_socket.connect((remote_ip , port))
 
 e_event = Event()
 
