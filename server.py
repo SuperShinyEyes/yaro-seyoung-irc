@@ -39,6 +39,7 @@ class YarongServerThread(threading.Thread):
             if ready[0]:
                 data = self.client_socket.recv(1024)
             else:
+                logging.debug(ready)
                 logging.debug("Not ready yet")
                 continue
 
@@ -179,14 +180,14 @@ class YarongServer(object):
             try:
                 #wait to accept a connection - blocking call
                 listener_socket, listener_address = self.socket.accept()
-                listener_socket.setblocking(0)
                 speaker_socket, speaker_address = self.socket.accept()
+                speaker_socket.setblocking(False)
                 (listner_ip, listener_port) = listener_address
                 print('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
                 self.client_sockets[speaker_socket] = (listener_socket, speaker_address)
 
                 #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-                thread_dict = {"socket":listener_socket, "port":listener_port, "event":self.threads_stop_event, "server":self}
+                thread_dict = {"socket":speaker_socket, "port":listener_port, "event":self.threads_stop_event, "server":self}
                 thread = YarongServerThread(name=str(listener_port),kwargs=thread_dict)
                 thread.start()
                 # self.client_threads.append(thread)
