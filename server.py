@@ -11,6 +11,9 @@ logging.basicConfig(
     format='(%(threadName)-10s) %(message)s',
 )
 
+CLOSE_MSG='/close'
+QUIT_MSG = '/quit'
+
 class YarongServerThread(threading.Thread):
     """docstring for ."""
     def __init__(self, group=None, target=None, name=None,
@@ -23,17 +26,16 @@ class YarongServerThread(threading.Thread):
         self.client_port = kwargs["port"]
 
     def is_client_quitting(self, msg):
-        return msg == YarongServer.QUIT_MSG
+        return msg == QUIT_MSG
 
 
     def listen(self):
         #Sending message to client_connected client
-        timeout_in_sec = 3
         self.client_socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
 
         #infinite loop so that function do not terminate and thread do not end.
         while not self.thread_stop_event.is_set():
-            ready = select.select([self.client_socket], [], [], timeout_in_sec)
+            ready = select.select([self.client_socket], [], [], self.server.listner_socket_timeout_in_sec)
             #Receiving from client
 
             if ready[0]:
@@ -64,14 +66,14 @@ class YarongServerThread(threading.Thread):
 
 
 class YarongServer(object):
-    HOST = ''   # Symbolic name meaning all available interfaces
-    PORT = 8888 # Arbitrary non-privileged port
-    CLOSE_MSG='/close'
-    QUIT_MSG = '/quit'
 
     """docstring for ."""
-    def __init__(self, num_nodes=10):
+    def __init__(self, num_nodes=10, host='', port=8888, listener_timeout_in_sec=2):
         self.num_nodes = num_nodes
+        self.host = host
+        self.port = port
+        self.listner_socket_timeout_in_sec = listener_timeout_in_sec
+        self.close_delay_in_sec = listener_timeout_in_sec + 1
         '''
         client_sockets = {speaker_socket: (listener_socket, (address, port) )}
 
@@ -100,7 +102,7 @@ class YarongServer(object):
     def bind(self):
         #Bind socket to local host and port
         try:
-            self.socket.bind((YarongServer.HOST, YarongServer.PORT))
+            self.socket.bind((self.host, self.port))
         except socket.error as e:
             print('Bind failed. Error Code : ' + str(e[0]) + ' Message ' + e[1])
             sys.exit()
@@ -144,7 +146,7 @@ class YarongServer(object):
     def close_all_client_sockets(self, ):
         for (speaker_socket, v) in self.client_sockets.items():
             (listener_socket, _) = v
-            listener_socket.sendall(YarongServer.CLOSE_MSG.encode())
+            listener_socket.sendall(CLOSE_MSG.encode())
             self.close_client_connection(speaker_socket, True)
 
         self.client_sockets = {}
@@ -199,12 +201,12 @@ class YarongServer(object):
         self.close()
 
     def close(self):
-        self.close_all_client_sockets()
-        self.socket.close()
+        import time
         self.threads_stop_event.set()
         print("Closing....")
-        import time
-        time.sleep(4)
+        time.sleep(self.close_delay_in_sec)
+        self.close_all_client_sockets()
+        self.socket.close()
 
 
 
