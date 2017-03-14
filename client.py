@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 #Socket client example in python
 from thread import *
 import socket   #for sockets
@@ -12,10 +14,14 @@ CLOSE_MSG='/close'
 def is_close(data):
     return data == CLOSE_MSG
 
-def close():
-    print("close()")
+def close_client():
+    print("close_client()")
     speaker_socket.close()
     listener_socket.close()
+
+def close_client_by_client():
+    speaker_socket.sendall("/quit".encode())
+    close_client()
 
 def listen_thread(conn, exit_event):
     #Sending message to connected client
@@ -34,7 +40,7 @@ def listen_thread(conn, exit_event):
         print(data)
 
     #came out of loop
-    close()
+    close_client()
 
     # Better solution than this.
     #os._exit(1)
@@ -79,11 +85,11 @@ def input_thingie(conn, exit_event):
     try :
         message = raw_input(">>> ")
         #Set the whole string
-        conn.sendall(message)
+        conn.sendall(message.encode())
     except socket.error:
         #Send failed
         print('Send failed')
-        close()
+        close_client()
         #sys.exit()
         exit_event.set()
     print("leave input_thingie")
@@ -99,5 +105,4 @@ try:
     print "event was set"
 
 except KeyboardInterrupt:
-    speaker_socket.sendall("/quit")
-    close()
+    close_client_by_client()
