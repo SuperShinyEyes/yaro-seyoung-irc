@@ -4,6 +4,8 @@ import socket   #for sockets
 import sys  #for exit
 import os
 
+from threading import Event
+
 WELCOME_MSG = ""
 CLOSE_MSG='/close'
 
@@ -15,7 +17,7 @@ def close():
     speaker_socket.close()
     listener_socket.close()
 
-def listen_thread(conn):
+def listen_thread(conn, exit_event):
     #Sending message to connected client
     conn.send('Welcome to the server. Type something and hit enter\n') #send only takes string
 
@@ -35,8 +37,9 @@ def listen_thread(conn):
     close()
 
     # Better solution than this.
-    os._exit(1)
-
+    #os._exit(1)
+    print "exiting listen_thread"
+    exit_event.set()
 
 #create an INET, STREAMing socket
 def create_socket():
@@ -65,25 +68,36 @@ remote_ip = "localhost"
 listener_socket.connect((remote_ip , port))
 speaker_socket.connect((remote_ip , port))
 
-start_new_thread(listen_thread ,(listener_socket,))
+e_event = Event()
+
+start_new_thread(listen_thread ,(listener_socket, e_event))
 
 welcome()
 # print('Socket Connected to ' + host + ' on ip ' + remote_ip)
 
-#now keep talking with the client
-while True:
-    #Now receive data
+def input_thingie(conn, exit_event):
     try :
         message = raw_input(">>> ")
         #Set the whole string
-        speaker_socket.sendall(message)
+        conn.sendall(message)
     except socket.error:
         #Send failed
         print('Send failed')
         close()
-        sys.exit()
+        #sys.exit()
+        exit_event.set()
+    print("leave input_thingie")
 
-    except KeyboardInterrupt:
-        speaker_socket.sendall("/quit")
-        close()
-        break
+start_new_thread(input_thingie ,(speaker_socket, e_event))
+
+#now keep talking with the client
+
+    #Now receive data
+try:
+    print "waiting for event to be set"
+    e_event.wait()
+    print "event was set"
+
+except KeyboardInterrupt:
+    speaker_socket.sendall("/quit")
+    close()
