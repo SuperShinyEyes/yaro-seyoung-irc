@@ -35,6 +35,7 @@ class YarongNode(object):
         return s
 
 
+
 class YarongServer(YarongNode):
 
     """docstring for ."""
@@ -55,12 +56,6 @@ class YarongServer(YarongNode):
 
     def init_socket_bind(self):
         self.socket = self.create_socket()
-
-        # Set socket to non-blocking mode.
-        # Read "How to set timeout on python's socket recv method?":
-        # http://stackoverflow.com/a/2721734/3067013
-        # self.socket.setblocking(0)
-
         print('Socket created')
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.bind()
@@ -80,17 +75,20 @@ class YarongServer(YarongNode):
 
     def propagate_msg(self, msg, sender=None):
         if sender:
-            for c in self.client_sockets.keys():
-                if c is not sender:
-                    self.client_sockets[c][0].sendall(msg.encode())
+            '''
+
+            '''
+            for pair in self.client_sockets.values():
+                if pair.speaker_socket is not sender:
+                    pair.listener_socket.sendall(msg.encode())
         else:
             '''
             Some client has left.
             Send a msg:
             "User A has left"
             '''
-            for c in self.client_sockets.keys():
-                self.client_sockets[c][0].sendall(msg.encode())
+            for pair in self.client_sockets.values():
+                pair.listener_socket.sendall(msg.encode())
 
     def client_quits(self, speaker_socket, speaker_port):
         self.close_client_connection(speaker_socket)
@@ -101,8 +99,7 @@ class YarongServer(YarongNode):
 
     def close_client_connection(self, speaker_socket, close_all=False):
         speaker_socket.close()
-        listener_socket = self.client_sockets[speaker_socket][0]
-        listener_socket.close()
+        self.client_sockets[speaker_socket].listener_socket.close()
 
         if not close_all:
             self.client_sockets.pop(speaker_socket, None)
@@ -117,8 +114,7 @@ class YarongServer(YarongNode):
 
 
     def add_client(self, socket_pair):
-        self.client_sockets[socket_pair.speaker_socket] = \
-            (socket_pair.listener_socket, socket_pair.speaker_address)
+        self.client_sockets[socket_pair.speaker_socket] = socket_pair
 
         thread = YarongServerClientListenerThread(
             name=str(socket_pair.listener_port),
@@ -160,8 +156,6 @@ class YarongServer(YarongNode):
         self.socket.close()
 
 
-
-
 class YarongClient(YarongNode):
 
     """docstring for ."""
@@ -175,6 +169,7 @@ class YarongClient(YarongNode):
     def init_socket_connect(self):
         self.listener_socket = self.create_socket()
         self.input_socket = self.create_socket()
+
         self.listener_socket.connect((self.host_ip , self.host_port))
         self.input_socket.connect((self.host_ip , self.host_port))
 
@@ -237,6 +232,8 @@ class YarongSocketPair(object):
         self.speaker_address  = speaker_address[0]
         self.speaker_port  = speaker_address[1]
 
+
+
 class YarongServerAcceptListenerThread(threading.Thread):
     """docstring for ."""
     def __init__(self, group=None, target=None, name=None,
@@ -258,7 +255,14 @@ class YarongServerAcceptListenerThread(threading.Thread):
 
             listener_socket, listener_address = self.server.socket.accept()
             speaker_socket, speaker_address = self.server.socket.accept()
-            speaker_socket.setblocking(False)
+            '''
+            Q. Do I need to set a socket as non-blocking?
+            '''
+            # Set socket to non-blocking mode.
+            # Read "How to set timeout on python's socket recv method?":
+            # http://stackoverflow.com/a/2721734/3067013
+            # self.socket.setblocking(False)
+            # speaker_socket.setblocking(False)
             (listner_ip, listener_port) = listener_address
             logging.debug('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
             socket_pair = YarongSocketPair(
@@ -268,7 +272,6 @@ class YarongServerAcceptListenerThread(threading.Thread):
                 speaker_address
             )
             self.server.add_client(socket_pair)
-
 
 
 
@@ -309,7 +312,7 @@ class YarongServerClientListenerThread(threading.Thread):
                 print("Client quits")
                 break
 
-            msg = '[%s]>>> %s' % (self.client_port, data.decode())
+            msg = '#%s:\n%s\n' % (self.client_port, data.decode())
 
             logging.debug("propagate")
             self.server.propagate_msg(msg, self.client_socket)
@@ -333,6 +336,8 @@ class YarongClientListenerThread(threading.Thread):
     def is_session_close(self, data):
         return data == CLOSE_MSG
 
+    def prompt_message(self, encoded_msg):
+        logging.debug(encoded_msg.decode())
 
     def run(self):
         #Sending message to client_connected client
@@ -343,21 +348,16 @@ class YarongClientListenerThread(threading.Thread):
             ready = select.select([self.socket], [], [], self.client.listner_socket_timeout_in_sec)
             #Receiving from client
 
-            if ready[0]:
-                data = self.socket.recv(1024)
-            else:
-                # logging.debug(ready)
-                # logging.debug("Not ready yet")
+            if not ready[0]:
                 continue
+
+            data = self.socket.recv(1024)
 
             if not data or self.is_session_close(data.decode()):
                 print("Session closes")
-
                 break
 
-            msg = '[%s]>>> %s' % (self.other_client_port, data.decode())
-
-            logging.debug(msg)
+            self.prompt_message(data)
 
         #came out of loop
         self.client.close_client()
