@@ -41,8 +41,8 @@ class YarongServerThread(threading.Thread):
             if ready[0]:
                 data = self.client_socket.recv(1024)
             else:
-                logging.debug(ready)
-                logging.debug("Not ready yet")
+                # logging.debug(ready)
+                # logging.debug("Not ready yet")
                 continue
 
             if not data or self.is_client_quitting(data.decode()):

@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 
-#Socket client example in python
-from _thread import *
-import socket   #for sockets
-import sys  #for exit
-import os
-import select
+import socket
+import sys          # For user inputs
+import select       # For non-blocking
 import threading
-import logging
+import logging      # For Debugging in threads
 
-WELCOME_MSG = ""
 CLOSE_MSG='/close'
 
 logging.basicConfig(
@@ -44,8 +40,8 @@ class YarongClientListenerThread(threading.Thread):
             if ready[0]:
                 data = self.socket.recv(1024)
             else:
-                logging.debug(ready)
-                logging.debug("Not ready yet")
+                # logging.debug(ready)
+                # logging.debug("Not ready yet")
                 continue
 
             if not data or self.is_session_close(data.decode()):
@@ -77,8 +73,22 @@ class YarongClientInputThread(threading.Thread):
 
     def get_user_input(self):
         while not self.threads_stop_event.is_set():
+
+            # Non-blocking user input mechanism
+            # Read "Keyboard input with timeout in Python":
+            # http://stackoverflow.com/a/2904057/3067013
+            user_input_sources, _, _ = select.select(
+            [sys.stdin],
+            [],
+            [],
+            self.client.listner_socket_timeout_in_sec
+            )
+            if not user_input_sources:
+                continue
+
+            message = user_input_sources[0].readline().strip()
             try :
-                message = input(">>> ")
+                # message = input(">>> ")
                 #Set the whole string
                 self.socket.sendall(message.encode())
             except socket.error:
