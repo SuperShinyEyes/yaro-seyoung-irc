@@ -21,7 +21,7 @@ class YarongServerThread(threading.Thread):
         super().__init__(group=group, target=target, name=name,
                          daemon=daemon)
         self.client_socket = kwargs["socket"]
-        self.thread_stop_event = kwargs["event"]
+        self.threads_stop_event = kwargs["event"]
         self.server = kwargs["server"]
         self.client_port = kwargs["port"]
 
@@ -34,7 +34,7 @@ class YarongServerThread(threading.Thread):
         self.client_socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
 
         #infinite loop so that function do not terminate and thread do not end.
-        while not self.thread_stop_event.is_set():
+        while not self.threads_stop_event.is_set():
             ready = select.select([self.client_socket], [], [], self.server.listner_socket_timeout_in_sec)
             #Receiving from client
 

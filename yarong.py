@@ -1,4 +1,4 @@
-class YarongObject(object):
+class YarongNode(object):
     """docstring for Yarong."""
     def __init__(self, arg):
 
