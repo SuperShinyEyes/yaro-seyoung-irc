@@ -68,10 +68,10 @@ class YarongServerThread(threading.Thread):
 class YarongServer(object):
 
     """docstring for ."""
-    def __init__(self, num_nodes=10, host='', port=8888, listener_timeout_in_sec=2):
+    def __init__(self, num_nodes=10, host='', host_port=8888, listener_timeout_in_sec=2):
         self.num_nodes = num_nodes
         self.host = host
-        self.port = port
+        self.host_port = host_port
         self.listner_socket_timeout_in_sec = listener_timeout_in_sec
         self.close_delay_in_sec = listener_timeout_in_sec + 1
         '''
@@ -84,9 +84,17 @@ class YarongServer(object):
         self.initialize_socket()
         self.threads_stop_event = threading.Event()
 
+    def create_socket(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error:
+            print('Failed to create socket')
+            sys.exit()
+
+        return s
 
     def initialize_socket(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket = self.create_socket()
 
         # Set socket to non-blocking mode.
         # Read "How to set timeout on python's socket recv method?":
@@ -102,7 +110,7 @@ class YarongServer(object):
     def bind(self):
         #Bind socket to local host and port
         try:
-            self.socket.bind((self.host, self.port))
+            self.socket.bind((self.host, self.host_port))
         except socket.error as e:
             print('Bind failed. Error Code : ' + str(e[0]) + ' Message ' + e[1])
             sys.exit()
