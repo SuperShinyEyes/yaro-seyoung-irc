@@ -177,7 +177,7 @@ class YarongClient(YarongNode):
     def is_close(self,data):
         return data == CLOSE_MSG
 
-    def close_client(self):
+    def close(self):
         import time
         self.threads_stop_event.set()
         print("Closing....")
@@ -187,9 +187,10 @@ class YarongClient(YarongNode):
         self.listener_socket.close()
         print("All sockets closed")
 
-    def close_client_by_client(self):
-        self.input_socket.sendall("/quit".encode())
-        self.close_client()
+    def quit(self):
+        self.input_socket.sendall(QUIT_MSG.encode())
+        self.threads_stop_event.set()
+        self.close()
 
 
     def welcome(self):
@@ -218,7 +219,7 @@ class YarongClient(YarongNode):
             print("event was set")
 
         except KeyboardInterrupt:
-            self.close_client_by_client()
+            self.quit()
         finally:
             print("Over")
 
@@ -346,6 +347,16 @@ class YarongClientListenerThread(threading.Thread):
         #infinite loop so that function do not terminate and thread do not end.
         while not self.threads_stop_event.is_set():
             ready = select.select([self.socket], [], [], self.client.listner_socket_timeout_in_sec)
+
+            if self.threads_stop_event.is_set():
+                '''
+                Case: When a user sends "/quit".
+                The client will close itself. However this loop might be not
+                synchronized so it will call self.client.close() again.
+                Thus "return".
+                '''
+                return
+
             #Receiving from client
 
             if not ready[0]:
@@ -360,7 +371,7 @@ class YarongClientListenerThread(threading.Thread):
             self.prompt_message(data)
 
         #came out of loop
-        self.client.close_client()
+        self.client.close()
 
 
 
@@ -373,6 +384,9 @@ class YarongClientInputThread(threading.Thread):
         self.socket = kwargs["socket"]
         self.threads_stop_event = kwargs["event"]
         self.client = kwargs["client"]
+
+    def is_quitting(self, msg):
+        return msg == QUIT_MSG
 
     def run(self):
         while not self.threads_stop_event.is_set():
@@ -390,12 +404,17 @@ class YarongClientInputThread(threading.Thread):
                 continue
 
             message = user_input_sources[0].readline().strip()
+
+            if self.is_quitting(message):
+                self.client.quit()
+                break
+
             try :
                 #Set the whole string
                 self.socket.sendall(message.encode())
             except socket.error:
                 #Send failed
                 print('Send failed')
-                self.client.close_client()
+                self.client.close()
 
         print("leave input_thingie")
