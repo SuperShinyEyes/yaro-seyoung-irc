@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import socket
 import sys
-# from _thread import *
 import threading
 import logging
 import select
@@ -43,6 +42,7 @@ class YarongServer(YarongNode):
         super(YarongServer, self).__init__(host, host_ip, host_port, listener_timeout_in_sec)
         '''
         client_sockets = {speaker_socket: (listener_socket, (address, port) )}
+        client_sockets = {speaker_socket: socket_pair}
 
         '''
         self.client_sockets = {}
@@ -115,25 +115,21 @@ class YarongServer(YarongNode):
 
         self.client_sockets = {}
 
-    def init_client_listener_thread(self, socket_pair):
-        #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-        thread_dict = {
-            "socket":socket_pair.speaker_socket,
-            "port":socket_pair.listener_port,
-            "event":self.threads_stop_event,
-            "server":self
-        }
-        thread = YarongServerClientListenerThread(
-            name=str(socket_pair.listener_port),
-            kwargs=thread_dict
-        )
-        thread.start()
-
 
     def add_client(self, socket_pair):
         self.client_sockets[socket_pair.speaker_socket] = \
             (socket_pair.listener_socket, socket_pair.speaker_address)
-        self.init_client_listener_thread(socket_pair)
+
+        thread = YarongServerClientListenerThread(
+            name=str(socket_pair.listener_port),
+            kwargs={
+                "socket":socket_pair.speaker_socket,
+                "port":socket_pair.listener_port,
+                "event":self.threads_stop_event,
+                "server":self
+            }
+        )
+        thread.start()
 
 
     def run(self):
@@ -152,29 +148,8 @@ class YarongServer(YarongNode):
         except KeyboardInterrupt:
             pass
 
-        print("Close server socket")
         self.close()
-        # while True:
-        #     try:
-        #         #wait to accept a connection - blocking call
-        #         listener_socket, listener_address = self.socket.accept()
-        #         speaker_socket, speaker_address = self.socket.accept()
-        #         speaker_socket.setblocking(False)
-        #         (listner_ip, listener_port) = listener_address
-        #         print('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
-        #         self.client_sockets[speaker_socket] = (listener_socket, speaker_address)
-        #
-        #         #start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-        #         thread_dict = {"socket":speaker_socket, "port":listener_port, "event":self.threads_stop_event, "server":self}
-        #         thread = YarongServerClientListenerThread(name=str(listener_port),kwargs=thread_dict)
-        #         thread.start()
-        #         # self.client_threads.append(thread)
-        #         # start_new_thread(self.client_thread ,(speaker_socket,))
-        #     except KeyboardInterrupt:
-        #         break
-        #
-        # print("Close server socket")
-        # self.close()
+
 
     def close(self):
         import time
@@ -227,7 +202,6 @@ class YarongClient(YarongNode):
             print(f.read())
 
 
-
     def run(self):
         listener_thread_kwargs = {
         "socket":self.listener_socket, "event": self.threads_stop_event,
@@ -252,6 +226,7 @@ class YarongClient(YarongNode):
             self.close_client_by_client()
         finally:
             print("Over")
+
 
 class YarongSocketPair(object):
     def __init__(self, listener_socket, listener_address, speaker_socket, speaker_address):
@@ -279,15 +254,19 @@ class YarongServerAcceptListenerThread(threading.Thread):
             #Receiving from client
 
             if not ready[0]:
-                logging.debug("Not ready.")
                 continue
 
             listener_socket, listener_address = self.server.socket.accept()
             speaker_socket, speaker_address = self.server.socket.accept()
             speaker_socket.setblocking(False)
             (listner_ip, listener_port) = listener_address
-            print('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
-            socket_pair = YarongSocketPair(listener_socket, listener_address, speaker_socket, speaker_address)
+            logging.debug('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
+            socket_pair = YarongSocketPair(
+                listener_socket,
+                listener_address,
+                speaker_socket,
+                speaker_address
+            )
             self.server.add_client(socket_pair)
 
 
@@ -308,25 +287,26 @@ class YarongServerClientListenerThread(threading.Thread):
         return msg == QUIT_MSG
 
 
-    def listen(self):
+    def run(self):
         #Sending message to client_connected client
         self.client_socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
 
         #infinite loop so that function do not terminate and thread do not end.
         while not self.threads_stop_event.is_set():
-            ready = select.select([self.client_socket], [], [], self.server.listner_socket_timeout_in_sec)
-            #Receiving from client
+            ready = select.select(
+                [self.client_socket],
+                [],
+                [],
+                self.server.listner_socket_timeout_in_sec
+            )
 
-            if ready[0]:
-                data = self.client_socket.recv(1024)
-            else:
-                # logging.debug(ready)
-                # logging.debug("Not ready yet")
+            if not ready[0]:
                 continue
+
+            data = self.client_socket.recv(1024)
 
             if not data or self.is_client_quitting(data.decode()):
                 print("Client quits")
-
                 break
 
             msg = '[%s]>>> %s' % (self.client_port, data.decode())
@@ -336,10 +316,6 @@ class YarongServerClientListenerThread(threading.Thread):
 
         #came out of loop
         self.server.client_quits(self.client_socket, self.client_port)
-
-    def run(self):
-        logging.debug("Running")
-        self.listen()
 
 
 
@@ -358,7 +334,7 @@ class YarongClientListenerThread(threading.Thread):
         return data == CLOSE_MSG
 
 
-    def listen(self):
+    def run(self):
         #Sending message to client_connected client
         self.socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
 
@@ -386,9 +362,6 @@ class YarongClientListenerThread(threading.Thread):
         #came out of loop
         self.client.close_client()
 
-    def run(self):
-        logging.debug("Running Listner thread")
-        self.listen()
 
 
 class YarongClientInputThread(threading.Thread):
@@ -401,24 +374,23 @@ class YarongClientInputThread(threading.Thread):
         self.threads_stop_event = kwargs["event"]
         self.client = kwargs["client"]
 
-    def get_user_input(self):
+    def run(self):
         while not self.threads_stop_event.is_set():
 
             # Non-blocking user input mechanism
             # Read "Keyboard input with timeout in Python":
             # http://stackoverflow.com/a/2904057/3067013
             user_input_sources, _, _ = select.select(
-            [sys.stdin],
-            [],
-            [],
-            self.client.listner_socket_timeout_in_sec
+                [sys.stdin],    # Reads
+                [],             # Writes
+                [],             # Exceptions
+                self.client.listner_socket_timeout_in_sec
             )
             if not user_input_sources:
                 continue
 
             message = user_input_sources[0].readline().strip()
             try :
-                # message = input(">>> ")
                 #Set the whole string
                 self.socket.sendall(message.encode())
             except socket.error:
@@ -427,7 +399,3 @@ class YarongClientInputThread(threading.Thread):
                 self.client.close_client()
 
         print("leave input_thingie")
-
-    def run(self):
-        logging.debug("Running Input thread")
-        self.get_user_input()
