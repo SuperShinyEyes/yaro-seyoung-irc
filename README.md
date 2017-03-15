@@ -3,13 +3,13 @@ CS course
 
 ## Instructions
 ### Start server
-```python
-python server.py
+```bash
+python3 server.py
 ```
 
 ### Start client
 ```bash
-telnet localhost 8888
+python3 client.py
 ```
 
 ## Reference
