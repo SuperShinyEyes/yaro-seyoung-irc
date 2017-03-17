@@ -1,5 +1,8 @@
 # yaro-seyoung-irc
-CS course
+Aalto CS course.
+
+## Project Management
+[![Trello](/images/trello.png)](https://trello.com/b/DqWXoP5o/yarong)
 
 ## Instructions
 ### Start server
