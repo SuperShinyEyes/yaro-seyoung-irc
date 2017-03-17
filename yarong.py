@@ -27,7 +27,9 @@ QUIT_MSG = '/quit'      # Client leaves
 
 
 class YarongNode(object):
-    """Parent class for server and client"""
+    """
+    Parent class for server and client
+    """
     def __init__(self, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
         self.host = host
         self.host_ip = host_ip
@@ -48,6 +50,9 @@ class YarongNode(object):
 
 
 class YarongSocketPair(object):
+    """
+    Pair of socket for one server-client session.
+    """
     def __init__(self, listener_socket, listener_address, speaker_socket, speaker_address):
         self.listener_socket = listener_socket
         self.listener_address = listener_address[0]

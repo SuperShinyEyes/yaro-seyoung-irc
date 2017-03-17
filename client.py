@@ -1,9 +1,16 @@
+"""
+Yaroslav Getman 473475
+Seyoung Park 217495
+17.03.2017
+
+Our project is a simple IRC program implemented using Python3
+"""
 #!/usr/bin/env python3
 from yarong import *
 
 class YarongClient(YarongNode):
 
-    """docstring for ."""
+    """IRC client"""
     def __init__(self, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
         super(YarongClient, self).__init__(host, host_ip, host_port, listener_timeout_in_sec)
 
@@ -60,6 +67,7 @@ class YarongClient(YarongNode):
 
         try:
             print("waiting for event to be set")
+            # Blocks the main thread until event is set.
             self.threads_stop_event.wait()
             print("event was set")
 
@@ -71,7 +79,9 @@ class YarongClient(YarongNode):
 
 
 class YarongClientListenerThread(threading.Thread):
-    """docstring for ."""
+    """
+    Waits for incoming messages from the server.
+    """
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, *, daemon=None):
         super().__init__(group=group, target=target, name=name,
@@ -123,7 +133,9 @@ class YarongClientListenerThread(threading.Thread):
 
 
 class YarongClientInputThread(threading.Thread):
-    """docstring for ."""
+    """
+    Listens to user inputs.
+    """
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, *, daemon=None):
         super().__init__(group=group, target=target, name=name,

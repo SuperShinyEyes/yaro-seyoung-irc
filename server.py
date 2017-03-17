@@ -1,15 +1,20 @@
+"""
+Yaroslav Getman 473475
+Seyoung Park 217495
+17.03.2017
+
+Our project is a simple IRC program implemented using Python3
+"""
 #!/usr/bin/env python3
 from yarong import *
 
 class YarongServer(YarongNode):
 
-    """IRC server"""
-    def __init__(self, num_nodes=10, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
+    """IRC server."""
+    def __init__(self, num_nodes=6, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
         super(YarongServer, self).__init__(host, host_ip, host_port, listener_timeout_in_sec)
         '''
-        client_sockets = {speaker_socket: (listener_socket, (address, port) )}
         client_sockets = {speaker_socket: socket_pair}
-
         '''
         self.client_sockets = {}
         self.client_threads = []
@@ -21,9 +26,9 @@ class YarongServer(YarongNode):
 
     def init_socket_bind(self):
         """
-        Creates a socket
-        Reuse the same adress for the socket
-        Bind to a port
+        Creates a socket.
+        Reuse the same adress for the socket.
+        Bind to a port.
         """
         self.socket = self.create_socket()
         print('Socket created')
@@ -127,7 +132,9 @@ class YarongServer(YarongNode):
 
 
 class YarongServerAcceptListenerThread(threading.Thread):
-    """docstring for ."""
+    """
+    Waits for new clients.
+    """
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, *, daemon=None):
         super().__init__(group=group, target=target, name=name,
@@ -141,7 +148,7 @@ class YarongServerAcceptListenerThread(threading.Thread):
         while not self.threads_stop_event.is_set():
             ready = select.select([self.server.socket], [], [], self.server.listner_socket_timeout_in_sec)
             #Receiving from client
-
+            # logging.debug("Listening accept")
             if not ready[0]:
                 continue
 
@@ -168,7 +175,9 @@ class YarongServerAcceptListenerThread(threading.Thread):
 
 
 class YarongServerClientListenerThread(threading.Thread):
-    """docstring for ."""
+    """
+    Listens to incoming messages from clients.
+    """
     def __init__(self, group=None, target=None, name=None,
                  args=(), kwargs=None, *, daemon=None):
         super().__init__(group=group, target=target, name=name,
@@ -196,6 +205,9 @@ class YarongServerClientListenerThread(threading.Thread):
             )
 
             if self.threads_stop_event.is_set():
+                """
+                When server shuts itself down, quit.
+                """
                 return
 
             if not ready[0]:
