@@ -62,12 +62,12 @@ class YarongClient(YarongNode):
         thread = YarongClientListenerThread(kwargs=thread_kwargs)
         thread.start()
 
-        input_thread_kwargs = {
-        "socket":self.socket, "event": self.threads_stop_event,
-        "client": self
-        }
-        input_thread = YarongClientInputThread(kwargs=input_thread_kwargs)
-        input_thread.start()
+        # input_thread_kwargs = {
+        # "socket":self.socket, "event": self.threads_stop_event,
+        # "client": self
+        # }
+        # input_thread = YarongClientInputThread(kwargs=input_thread_kwargs)
+        # input_thread.start()
 
         try:
             print("waiting for event to be set")
@@ -102,9 +102,14 @@ class YarongClientListenerThread(threading.Thread):
         logging.debug(encoded_msg.decode())
 
     def is_user_input(self, data_source):
+        logging.debug(sys.stdin)
+        logging.debug(data_source)
         return data_source == sys.stdin
 
-    def parse_user_input():
+    def is_quitting(self, msg):
+        return msg == QUIT_MSG
+
+    def parse_user_input(self):
         message = sys.stdin.readline().strip()
         if self.is_quitting(message):
             self.client.quit()
@@ -136,14 +141,19 @@ class YarongClientListenerThread(threading.Thread):
                 return
 
             #Receiving from client
-
-            data_source = ready[0]
-            if not data_source:
+            if not ready[0]:
+                logging.debug("No data nor input")
                 continue
 
-            if self.is_user_input(data_source):
-                self.parse_user_input()
+            data_source = ready[0][0]
 
+            logging.debug("data or input")
+            if self.is_user_input(data_source):
+                logging.debug("User typed something")
+                self.parse_user_input()
+                continue
+
+            logging.debug("Got msg")
             data = self.socket.recv(1024)
 
             if not data or self.is_session_close(data.decode()):
