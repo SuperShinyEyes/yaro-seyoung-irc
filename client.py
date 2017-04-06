@@ -17,6 +17,7 @@ class YarongClient(YarongNode):
         self.socket = None
         # self.input_socket = None
         self.init_socket_connect()
+        self._open = True
 
     def init_socket_connect(self):
         self.socket = self.create_socket()
@@ -52,10 +53,11 @@ class YarongClient(YarongNode):
             self.close()
 
     def parse_message(self):
+        print("Parsing msg")
         data = self.socket.recv(1024)
 
         if not data or self.is_session_close(data.decode()):
-            logging.debug("Session closes")
+            print("Session closes")
             self.close()
         else:
             self.prompt_message(data)
@@ -65,9 +67,9 @@ class YarongClient(YarongNode):
 
     def close(self):
         import time
-        self.threads_stop_event.set()
+        raise CloseYarong
         print("Closing....")
-        time.sleep(self.close_delay_in_sec)
+        # time.sleep(self.close_delay_in_sec)
 
 
         self.socket.close()
@@ -86,17 +88,18 @@ class YarongClient(YarongNode):
             print(f.read())
 
     def listen(self):
-        while not self.threads_stop_event.is_set():
-            ready = select.select([self.socket, sys.stdin], [], [], self.listner_socket_timeout_in_sec)
+        # while not self.threads_stop_event.is_set():
+        while True:
+            # if self.threads_stop_event.is_set():
+            #     '''
+            #     Case: When a user sends "/quit".
+            #     The client will close itself. However this loop might be not
+            #     synchronized so it will call self.close() again.
+            #     Thus "return".
+            #     '''
+            #     return
 
-            if self.threads_stop_event.is_set():
-                '''
-                Case: When a user sends "/quit".
-                The client will close itself. However this loop might be not
-                synchronized so it will call self.close() again.
-                Thus "return".
-                '''
-                return
+            ready = select.select([self.socket, sys.stdin], [], [], self.listner_socket_timeout_in_sec)
 
             #Receiving from client
             if not ready[0]:
@@ -122,7 +125,8 @@ class YarongClient(YarongNode):
 
         except KeyboardInterrupt:
             self.quit()
-
+        except CloseYarong:
+            pass
         finally:
             print("Over")
 

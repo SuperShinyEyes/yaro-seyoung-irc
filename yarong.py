@@ -24,7 +24,7 @@ Constants for commands.
 CLOSE_MSG='/close'      # Server shuts down
 QUIT_MSG = '/quit'      # Client leaves
 
-
+class CloseYarong(Exception): pass
 
 class YarongNode(object):
     """

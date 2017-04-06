@@ -97,7 +97,6 @@ class YarongServer(YarongNode):
     def close(self):
         import time
         print("Closing....")
-        time.sleep(self.close_delay_in_sec)
         self.close_all_client_sockets()
         self.socket.close()
 
