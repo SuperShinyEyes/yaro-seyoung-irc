@@ -157,32 +157,36 @@ class YarongServerAcceptListenerThread(threading.Thread):
             without a file descriptor becoming ready, three empty lists are
             returned.
             '''
-            ready = select.select([self.server.socket], [], [], self.server.listner_socket_timeout_in_sec)
+            sockets = list(self.server.sockets.values())
+            ready = select.select(sockets, [], [], self.server.listner_socket_timeout_in_sec)
             #Receiving from client
             # logging.debug("Listening accept")
             if not ready[0]:
+                print("No msg")
                 continue
 
-            socket, address = self.server.socket.accept()
-            speaker_socket, speaker_address = self.server.socket.accept()
-            '''
-            Q. Do I need to set a socket as non-blocking?
-            '''
-            # Set socket to non-blocking mode.
-            # Read "How to set timeout on python's socket recv method?":
-            # http://stackoverflow.com/a/2721734/3067013
-            # self.socket.setblocking(False)
-            # speaker_socket.setblocking(False)
-            (listner_ip, port) = address
-            logging.debug('Connected with ' + address[0] + ':' + str(address[1]))
-            socket_pair = YarongSessionSocket(
-                socket,
-                address,
-                speaker_socket,
-                speaker_address
-            )
-            self.server.add_client(socket_pair)
+            socket = ready[0][0]
+            if socket == self.server.socket:
+                print("New client")
+                socket, address = self.server.socket.accept()
 
+                '''
+                Q. Do I need to set a socket as non-blocking?
+                '''
+                # Set socket to non-blocking mode.
+                # Read "How to set timeout on python's socket recv method?":
+                # http://stackoverflow.com/a/2721734/3067013
+                # self.socket.setblocking(False)
+                # speaker_socket.setblocking(False)
+                (listner_ip, port) = address
+                logging.debug('Connected with ' + address[0] + ':' + str(address[1]))
+                session_socket = YarongSessionSocket(
+                    socket,
+                    address
+                )
+                # self.server.add_client(socket)
+            # else:
+                # print("Not a new client")
 
 
 class YarongServerClientListenerThread(threading.Thread):

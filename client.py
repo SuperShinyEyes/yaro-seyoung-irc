@@ -15,15 +15,15 @@ class YarongClient(YarongNode):
         super(YarongClient, self).__init__(host, host_ip, host_port, timeout_in_sec)
 
         self.socket = None
-        self.input_socket = None
+        # self.input_socket = None
         self.init_socket_connect()
 
     def init_socket_connect(self):
         self.socket = self.create_socket()
-        self.input_socket = self.create_socket()
+        # self.input_socket = self.create_socket()
 
         self.socket.connect((self.host_ip , self.host_port))
-        self.input_socket.connect((self.host_ip , self.host_port))
+        # self.input_socket.connect((self.host_ip , self.host_port))
 
 
     def is_close(self,data):
@@ -35,12 +35,12 @@ class YarongClient(YarongNode):
         print("Closing....")
         time.sleep(self.close_delay_in_sec)
 
-        self.input_socket.close()
+        # self.input_socket.close()
         self.socket.close()
         print("All sockets closed")
 
     def quit(self):
-        self.input_socket.sendall(QUIT_MSG.encode())
+        # self.input_socket.sendall(QUIT_MSG.encode())
         self.threads_stop_event.set()
         self.close()
 
@@ -59,7 +59,7 @@ class YarongClient(YarongNode):
         thread.start()
 
         input_thread_kwargs = {
-        "socket":self.input_socket, "event": self.threads_stop_event,
+        "socket":self.socket, "event": self.threads_stop_event,
         "client": self
         }
         input_thread = YarongClientInputThread(kwargs=input_thread_kwargs)

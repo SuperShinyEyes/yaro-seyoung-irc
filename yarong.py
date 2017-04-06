@@ -53,7 +53,7 @@ class YarongSessionSocket(object):
     """
     Pair of socket for one server-client session.
     """
-    def __init__(self, socket, address, speaker_socket, speaker_address):
+    def __init__(self, socket, address):
         self.socket = socket
         self.address = address[0]
         self.port = address[1]
