@@ -102,8 +102,6 @@ class YarongClientListenerThread(threading.Thread):
         logging.debug(encoded_msg.decode())
 
     def is_user_input(self, data_source):
-        logging.debug(sys.stdin)
-        logging.debug(data_source)
         return data_source == sys.stdin
 
     def is_quitting(self, msg):
@@ -163,65 +161,9 @@ class YarongClientListenerThread(threading.Thread):
 
             else:
                 self.parse_message()
-            # # logging.debug("Got msg")
-            # data = self.socket.recv(1024)
-            #
-            # if not data or self.is_session_close(data.decode()):
-            #     print("Session closes")
-            #     break
-            #
-            # self.prompt_message(data)
 
         #came out of loop
         self.client.close()
-
-
-
-# class YarongClientInputThread(threading.Thread):
-#     """
-#     Listens to user inputs.
-#     """
-#     def __init__(self, group=None, target=None, name=None,
-#                  args=(), kwargs=None, *, daemon=None):
-#         super().__init__(group=group, target=target, name=name,
-#                          daemon=daemon)
-#         self.socket = kwargs["socket"]
-#         self.threads_stop_event = kwargs["event"]
-#         self.client = kwargs["client"]
-#
-#     def is_quitting(self, msg):
-#         return msg == QUIT_MSG
-#
-#     def run(self):
-#         while not self.threads_stop_event.is_set():
-#
-#             # Non-blocking user input mechanism
-#             # Read "Keyboard input with timeout in Python":
-#             # http://stackoverflow.com/a/2904057/3067013
-#             user_input_sources, _, _ = select.select(
-#                 [sys.stdin],    # Reads
-#                 [],             # Writes
-#                 [],             # Exceptions
-#                 self.client.listner_socket_timeout_in_sec
-#             )
-#             if not user_input_sources:
-#                 continue
-#
-#             message = user_input_sources[0].readline().strip()
-#
-#             if self.is_quitting(message):
-#                 self.client.quit()
-#                 break
-#
-#             try :
-#                 #Set the whole string
-#                 self.socket.sendall(message.encode())
-#             except socket.error:
-#                 #Send failed
-#                 print('Send failed')
-#                 self.client.close()
-#
-#         print("leave input_thingie")
 
 
 if __name__ == "__main__":

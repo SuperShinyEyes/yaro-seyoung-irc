@@ -73,16 +73,15 @@ class YarongServer(YarongNode):
         self.propagate_msg(msg)
         print(msg)
 
-    def close_client_connection(self, speaker_socket, close_all=False):
-        speaker_socket.close()
-        self.client_sockets[speaker_socket].socket.close()
-        #
+    def close_client_connection(self, client_socket, close_all=False):
+        client_socket.close()
+
         if not close_all:
             self.client_sockets.pop(speaker_socket, None)
 
     def close_all_client_sockets(self, ):
-        for (speaker_socket, pair) in self.client_sockets.items():
-            self.close_client_connection(speaker_socket, True)
+        for client_socket in self.client_sockets.keys():
+            self.close_client_connection(client_socket, True)
 
         self.client_sockets = {}
 
@@ -95,77 +94,33 @@ class YarongServer(YarongNode):
         '''
         self.client_sockets[session_socket.socket] = session_socket
 
-        # thread = YarongServerClientListenerThread(
-        #     name=str(socket_pair.port),
-        #     kwargs={
-        #         "socket":socket_pair.speaker_socket,
-        #         "port":socket_pair.port,
-        #         "event":self.threads_stop_event,
-        #         "server":self
-        #     }
-        # )
-        # thread.start()
-
-
-    def run(self):
-        print("Server running...")
-        accept_thread = YarongServerAcceptListenerThread(
-            name="accept_thread",
-            kwargs={
-                "event": self.threads_stop_event,
-                "server": self
-            }
-        )
-        accept_thread.start()
-        try:
-            #wait to accept a connection - blocking call
-            self.threads_stop_event.wait()
-        except KeyboardInterrupt:
-            pass
-
-        self.close()
-
-
     def close(self):
         import time
-        self.threads_stop_event.set()
+        # self.threads_stop_event.set()
         print("Closing....")
         time.sleep(self.close_delay_in_sec)
         self.close_all_client_sockets()
         self.socket.close()
-
-
-
-class YarongServerAcceptListenerThread(threading.Thread):
-    """
-    Waits for new clients.
-    """
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs=None, *, daemon=None):
-        super().__init__(group=group, target=target, name=name,
-                         daemon=daemon)
-        self.threads_stop_event = kwargs["event"]
-        self.server = kwargs["server"]
 
     def is_client_quitting(self, msg):
         return msg == QUIT_MSG
 
     def parse_client_message(self, client_socket):
         data = client_socket.recv(1024)
-        client_port = self.server.client_sockets[client_socket].port
+        client_port = self.client_sockets[client_socket].port
 
         if not data or self.is_client_quitting(data.decode()):
             print("Client quits")
-            self.server.client_quits(client_socket, client_port)
+            self.client_quits(client_socket, client_port)
 
         msg = '#%s:\n%s\n' % (client_port, data.decode())
 
         logging.debug("propagate")
-        self.server.propagate_msg(msg, client_socket)
+        self.propagate_msg(msg, client_socket)
 
     def accept_client(self):
         print("New client")
-        socket, address = self.server.socket.accept()
+        socket, address = self.socket.accept()
 
         '''
         Q. Do I need to set a socket as non-blocking?
@@ -181,14 +136,11 @@ class YarongServerAcceptListenerThread(threading.Thread):
             socket,
             address
         )
-        self.server.add_client(session_socket)
+        self.add_client(session_socket)
 
 
-
-    def run(self):
-        logging.debug("Run!")
-        #infinite loop so that function do not terminate and thread do not end.
-        sockets = [self.server.socket]
+    def listen(self):
+        sockets = [self.socket]
         while not self.threads_stop_event.is_set():
 
             '''
@@ -198,74 +150,30 @@ class YarongServerAcceptListenerThread(threading.Thread):
             without a file descriptor becoming ready, three empty lists are
             returned.
             '''
-            rlist = sockets + list(self.server.client_sockets.keys())
-            ready = select.select(rlist, [], [], self.server.listner_socket_timeout_in_sec)
+            rlist = sockets + list(self.client_sockets.keys())
+            ready = select.select(rlist, [], [], self.listner_socket_timeout_in_sec)
             #Receiving from client
-            # logging.debug("Listening accept")
             if not ready[0]:
                 logging.debug("No msg")
                 continue
 
             socket = ready[0][0]
-            if socket == self.server.socket:
+            if socket == self.socket:
                 self.accept_client()
 
             else:
                 self.parse_client_message(socket)
 
-
-class YarongServerClientListenerThread(threading.Thread):
-    """
-    Listens to incoming messages from clients.
-    """
-    def __init__(self, group=None, target=None, name=None,
-                 args=(), kwargs=None, *, daemon=None):
-        super().__init__(group=group, target=target, name=name,
-                         daemon=daemon)
-        self.client_socket = kwargs["socket"]
-        self.threads_stop_event = kwargs["event"]
-        self.server = kwargs["server"]
-        self.client_port = kwargs["port"]
-
-    def is_client_quitting(self, msg):
-        return msg == QUIT_MSG
-
-
     def run(self):
-        #Sending message to client_connected client
-        self.client_socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
+        print("Server running...")
 
-        #infinite loop so that function do not terminate and thread do not end.
-        while not self.threads_stop_event.is_set():
-            ready = select.select(
-                [self.client_socket],
-                [],
-                [],
-                self.server.listner_socket_timeout_in_sec
-            )
+        try:
+            self.listen()
+            # self.threads_stop_event.wait()
+        except KeyboardInterrupt:
+            pass
 
-            if self.threads_stop_event.is_set():
-                """
-                When server shuts itself down, quit.
-                """
-                return
-
-            if not ready[0]:
-                continue
-
-            data = self.client_socket.recv(1024)
-
-            if not data or self.is_client_quitting(data.decode()):
-                print("Client quits")
-                break
-
-            msg = '#%s:\n%s\n' % (self.client_port, data.decode())
-
-            logging.debug("propagate")
-            self.server.propagate_msg(msg, self.client_socket)
-
-        #came out of loop
-        self.server.client_quits(self.client_socket, self.client_port)
+        self.close()
 
 
 if __name__ == "__main__":
