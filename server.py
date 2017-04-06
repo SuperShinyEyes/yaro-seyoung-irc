@@ -11,12 +11,13 @@ from yarong import *
 class YarongServer(YarongNode):
 
     """IRC server."""
-    def __init__(self, num_nodes=6, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
-        super(YarongServer, self).__init__(host, host_ip, host_port, listener_timeout_in_sec)
+    def __init__(self, num_nodes=6, host='', host_ip='localhost', host_port=8888, timeout_in_sec=2):
+        super(YarongServer, self).__init__(host, host_ip, host_port, timeout_in_sec)
         '''
         client_sockets = {speaker_socket: socket_pair}
         '''
         self.client_sockets = {}
+        self.sockets = {}
         self.client_threads = []
         self.socket = None
         self.num_nodes = num_nodes
@@ -32,6 +33,8 @@ class YarongServer(YarongNode):
         """
         self.socket = self.create_socket()
         print('Socket created')
+        self.sockets[self] = self.socket
+
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.bind()
         print('Socket now listening')
@@ -56,7 +59,7 @@ class YarongServer(YarongNode):
             '''
             for pair in self.client_sockets.values():
                 if pair.speaker_socket is not sender:
-                    pair.listener_socket.sendall(msg.encode())
+                    pair.socket.sendall(msg.encode())
         else:
             '''
             Some client has left.
@@ -64,7 +67,7 @@ class YarongServer(YarongNode):
             "User A has left"
             '''
             for pair in self.client_sockets.values():
-                pair.listener_socket.sendall(msg.encode())
+                pair.socket.sendall(msg.encode())
 
     def client_quits(self, speaker_socket, speaker_port):
         self.close_client_connection(speaker_socket)
@@ -75,7 +78,7 @@ class YarongServer(YarongNode):
 
     def close_client_connection(self, speaker_socket, close_all=False):
         speaker_socket.close()
-        self.client_sockets[speaker_socket].listener_socket.close()
+        self.client_sockets[speaker_socket].socket.close()
         #
         if not close_all:
             self.client_sockets.pop(speaker_socket, None)
@@ -91,10 +94,10 @@ class YarongServer(YarongNode):
         self.client_sockets[socket_pair.speaker_socket] = socket_pair
 
         thread = YarongServerClientListenerThread(
-            name=str(socket_pair.listener_port),
+            name=str(socket_pair.port),
             kwargs={
                 "socket":socket_pair.speaker_socket,
-                "port":socket_pair.listener_port,
+                "port":socket_pair.port,
                 "event":self.threads_stop_event,
                 "server":self
             }
@@ -104,14 +107,14 @@ class YarongServer(YarongNode):
 
     def run(self):
         print("Server running...")
-        accept_listener_thread = YarongServerAcceptListenerThread(
-            name="accept_listener_thread",
+        accept_thread = YarongServerAcceptListenerThread(
+            name="accept_thread",
             kwargs={
                 "event": self.threads_stop_event,
                 "server": self
             }
         )
-        accept_listener_thread.start()
+        accept_thread.start()
         try:
             #wait to accept a connection - blocking call
             self.threads_stop_event.wait()
@@ -146,13 +149,21 @@ class YarongServerAcceptListenerThread(threading.Thread):
         logging.debug("Run!")
         #infinite loop so that function do not terminate and thread do not end.
         while not self.threads_stop_event.is_set():
+
+            '''
+            According to Python3 doc:
+            The return value is a triple of lists of objects that are ready:
+            subsets of the first three arguments. When the time-out is reached
+            without a file descriptor becoming ready, three empty lists are
+            returned.
+            '''
             ready = select.select([self.server.socket], [], [], self.server.listner_socket_timeout_in_sec)
             #Receiving from client
             # logging.debug("Listening accept")
             if not ready[0]:
                 continue
 
-            listener_socket, listener_address = self.server.socket.accept()
+            socket, address = self.server.socket.accept()
             speaker_socket, speaker_address = self.server.socket.accept()
             '''
             Q. Do I need to set a socket as non-blocking?
@@ -162,11 +173,11 @@ class YarongServerAcceptListenerThread(threading.Thread):
             # http://stackoverflow.com/a/2721734/3067013
             # self.socket.setblocking(False)
             # speaker_socket.setblocking(False)
-            (listner_ip, listener_port) = listener_address
-            logging.debug('Connected with ' + listener_address[0] + ':' + str(listener_address[1]))
-            socket_pair = YarongSocketPair(
-                listener_socket,
-                listener_address,
+            (listner_ip, port) = address
+            logging.debug('Connected with ' + address[0] + ':' + str(address[1]))
+            socket_pair = YarongSessionSocket(
+                socket,
+                address,
                 speaker_socket,
                 speaker_address
             )

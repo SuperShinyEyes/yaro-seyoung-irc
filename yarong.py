@@ -30,12 +30,12 @@ class YarongNode(object):
     """
     Parent class for server and client
     """
-    def __init__(self, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
+    def __init__(self, host='', host_ip='localhost', host_port=8888, timeout_in_sec=2):
         self.host = host
         self.host_ip = host_ip
         self.host_port = host_port
-        self.listner_socket_timeout_in_sec = listener_timeout_in_sec
-        self.close_delay_in_sec = listener_timeout_in_sec + 1
+        self.listner_socket_timeout_in_sec = timeout_in_sec
+        self.close_delay_in_sec = timeout_in_sec + 1
         self.threads_stop_event = threading.Event()
 
     def create_socket(self):
@@ -49,14 +49,11 @@ class YarongNode(object):
 
 
 
-class YarongSocketPair(object):
+class YarongSessionSocket(object):
     """
     Pair of socket for one server-client session.
     """
-    def __init__(self, listener_socket, listener_address, speaker_socket, speaker_address):
-        self.listener_socket = listener_socket
-        self.listener_address = listener_address[0]
-        self.listener_port = listener_address[1]
-        self.speaker_socket = speaker_socket
-        self.speaker_address  = speaker_address[0]
-        self.speaker_port  = speaker_address[1]
+    def __init__(self, socket, address, speaker_socket, speaker_address):
+        self.socket = socket
+        self.address = address[0]
+        self.port = address[1]

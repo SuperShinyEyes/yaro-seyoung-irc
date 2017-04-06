@@ -11,18 +11,18 @@ from yarong import *
 class YarongClient(YarongNode):
 
     """IRC client"""
-    def __init__(self, host='', host_ip='localhost', host_port=8888, listener_timeout_in_sec=2):
-        super(YarongClient, self).__init__(host, host_ip, host_port, listener_timeout_in_sec)
+    def __init__(self, host='', host_ip='localhost', host_port=8888, timeout_in_sec=2):
+        super(YarongClient, self).__init__(host, host_ip, host_port, timeout_in_sec)
 
-        self.listener_socket = None
+        self.socket = None
         self.input_socket = None
         self.init_socket_connect()
 
     def init_socket_connect(self):
-        self.listener_socket = self.create_socket()
+        self.socket = self.create_socket()
         self.input_socket = self.create_socket()
 
-        self.listener_socket.connect((self.host_ip , self.host_port))
+        self.socket.connect((self.host_ip , self.host_port))
         self.input_socket.connect((self.host_ip , self.host_port))
 
 
@@ -36,7 +36,7 @@ class YarongClient(YarongNode):
         time.sleep(self.close_delay_in_sec)
 
         self.input_socket.close()
-        self.listener_socket.close()
+        self.socket.close()
         print("All sockets closed")
 
     def quit(self):
@@ -51,12 +51,12 @@ class YarongClient(YarongNode):
 
 
     def run(self):
-        listener_thread_kwargs = {
-        "socket":self.listener_socket, "event": self.threads_stop_event,
+        thread_kwargs = {
+        "socket":self.socket, "event": self.threads_stop_event,
         "client": self, "other_client_port": self.host_port
         }
-        listener_thread = YarongClientListenerThread(kwargs=listener_thread_kwargs)
-        listener_thread.start()
+        thread = YarongClientListenerThread(kwargs=thread_kwargs)
+        thread.start()
 
         input_thread_kwargs = {
         "socket":self.input_socket, "event": self.threads_stop_event,
