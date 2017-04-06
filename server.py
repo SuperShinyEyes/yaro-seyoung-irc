@@ -77,7 +77,7 @@ class YarongServer(YarongNode):
         client_socket.close()
 
         if not close_all:
-            self.client_sockets.pop(speaker_socket, None)
+            self.client_sockets.pop(client_socket, None)
 
     def close_all_client_sockets(self, ):
         for client_socket in self.client_sockets.keys():
