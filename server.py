@@ -17,8 +17,6 @@ class YarongServer(YarongNode):
         client_sockets = {speaker_socket: socket_pair}
         '''
         self.client_sockets = {}
-        self.client_threads = []
-        self.socket = None
         self.num_nodes = num_nodes
         self.init_socket_bind()
 
@@ -113,7 +111,7 @@ class YarongServer(YarongNode):
 
         msg = '#%s:\n%s\n' % (client_port, data.decode())
 
-        logging.debug("propagate")
+        print("propagate")
         self.propagate_msg(msg, client_socket)
 
     def accept_client(self):
@@ -129,7 +127,7 @@ class YarongServer(YarongNode):
         # self.socket.setblocking(False)
         # speaker_socket.setblocking(False)
         (listner_ip, port) = address
-        logging.debug('Connected with ' + address[0] + ':' + str(address[1]))
+        print('Connected with ' + address[0] + ':' + str(address[1]))
         session_socket = YarongSessionSocket(
             socket,
             address
@@ -152,7 +150,7 @@ class YarongServer(YarongNode):
             ready = select.select(rlist, [], [], self.listner_socket_timeout_in_sec)
             #Receiving from client
             if not ready[0]:
-                logging.debug("No msg")
+                print("No msg")
                 continue
 
             socket = ready[0][0]

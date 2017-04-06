@@ -10,14 +10,8 @@ Our project is a simple IRC program implemented using Python3
 
 import socket
 import sys
-import threading
-import logging
 import select
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='(%(threadName)-10s) %(message)s',
-)
 """
 Constants for commands.
 """
@@ -25,6 +19,10 @@ CLOSE_MSG='/close'      # Server shuts down
 QUIT_MSG = '/quit'      # Client leaves
 
 class CloseYarong(Exception): pass
+    '''
+    Used in client to end the session.
+    It's raised by CLOSE_MSG sent by server.
+    '''
 
 class YarongNode(object):
     """
@@ -36,7 +34,7 @@ class YarongNode(object):
         self.host_port = host_port
         self.listner_socket_timeout_in_sec = timeout_in_sec
         self.close_delay_in_sec = timeout_in_sec + 1
-        self.threads_stop_event = threading.Event()
+        self.socket = None
 
     def create_socket(self):
         try:
@@ -47,6 +45,14 @@ class YarongNode(object):
 
         return s
 
+    def close(self):
+        pass
+
+    def listen(self):
+        pass
+
+    def run(self):
+        pass
 
 
 class YarongSessionSocket(object):
