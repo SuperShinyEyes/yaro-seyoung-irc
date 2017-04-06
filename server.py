@@ -96,7 +96,6 @@ class YarongServer(YarongNode):
 
     def close(self):
         import time
-        # self.threads_stop_event.set()
         print("Closing....")
         time.sleep(self.close_delay_in_sec)
         self.close_all_client_sockets()
@@ -141,7 +140,7 @@ class YarongServer(YarongNode):
 
     def listen(self):
         sockets = [self.socket]
-        while not self.threads_stop_event.is_set():
+        while True:
 
             '''
             According to Python3 doc:
@@ -169,11 +168,10 @@ class YarongServer(YarongNode):
 
         try:
             self.listen()
-            # self.threads_stop_event.wait()
         except KeyboardInterrupt:
             pass
-
-        self.close()
+        finally:
+            self.close()
 
 
 if __name__ == "__main__":
