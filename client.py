@@ -38,7 +38,7 @@ class YarongClient(YarongNode):
     def parse_user_input(self):
         message = sys.stdin.readline().strip()
         if self.is_quitting(message):
-            self.quit()
+            self.quit(kill_loop=True)
             return
         else:
             self.send_message(message)
@@ -50,31 +50,36 @@ class YarongClient(YarongNode):
         except socket.error:
             #Send failed
             print('Send failed')
-            self.close()
+            self.close(kill_loop=True)
 
     def parse_message(self):
         data = self.socket.recv(1024)
 
         if self.is_close_message(data):
-            self.close()
+            self.show_system_alert("Shutdown by server. See you again!")
+            self.close(kill_loop=True)
         else:
             self.prompt_message(data)
 
     def is_close_message(self, data):
         return not data or data.decode() == CLOSE_CMD
 
-    def close(self):
+    def close(self, kill_loop=False):
         '''
-        Close Yarong session.
+        Passive session termination by server.
         Raise halts the while loop in listen()
         '''
         self.socket.close()
         print("All sockets closed")
-        raise CloseYarong
+        if kill_loop:
+            raise CloseYarong
 
-    def quit(self):
+    def quit(self, kill_loop=False):
+        '''
+        Active session termination by user.
+        '''
         self.socket.sendall(QUIT_CMD.encode())
-        self.close()
+        self.close(kill_loop=kill_loop)
 
 
     def welcome(self):
@@ -155,24 +160,33 @@ class YarongClient(YarongNode):
         except UsernameSettingError:
             print("There was an error when setting a username.")
             return
-
-        try:
-            self.listen()
-        except KeyboardInterrupt:
-            self.quit()
         except CloseYarong:
-            pass
-        finally:
-            print("Over")
+            return
+        else:
+            try:
+                self.listen()
+            except KeyboardInterrupt:
+                self.quit()
+            except CloseYarong:
+                pass
+            finally:
+                print("Over")
 
+
+def is_cloud_mode():
+    mode = input("Do you want to go cloud(DigitalOcean)?(y/n)")
+    return mode in ["y", 'Y', 'yes', "YES"]
 
 
 def main():
     yarongClient = None
     ip = "localhost"
-    if len(sys.argv) > 1:
-        ip = sys.argv[1]
-        debug("ip: {:s}".format(ip))
+    if is_cloud_mode():
+        print("Okay, taking you to DigitalOcean(178.62.226.63:8888)")
+        ip = '178.62.226.63'
+    else:
+        print("Running on localhost:8888")
+
 
     try:
         yarongClient = YarongClient(host_ip=ip)

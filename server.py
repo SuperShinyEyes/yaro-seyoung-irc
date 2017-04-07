@@ -66,18 +66,25 @@ class YarongServer(YarongNode):
             for session_socket in self.client_sockets.values():
                 session_socket.socket.sendall(msg.encode())
 
-    def client_quits(self, client_socket, client_port):
-        self.close_client_connection(client_socket)
+    def client_quits(self, client_socket, client_username):
+        msg = "Client %s left the channel." % (client_username)
+        if self.is_client_socket_already_joined(client_socket):
+            self.propagate_msg(msg)
 
-        msg = "Client %s left the channel." % (client_port)
-        self.propagate_msg(msg)
+        self.close_client_connection(client_socket)
         print(msg)
+
+    def remove_client_from_db(self, client_socket):
+        if self.is_client_socket_already_joined(client_socket):
+            self.client_sockets.pop(client_socket, None)
+        else:
+            self.client_sockets_before_join.pop(client_socket, None)
 
     def close_client_connection(self, client_socket, close_all=False):
         client_socket.close()
 
         if not close_all:
-            self.client_sockets.pop(client_socket, None)
+            self.remove_client_from_db(client_socket)
 
     def close_all_client_sockets(self, ):
         for client_socket in self.client_sockets.keys():
@@ -96,7 +103,7 @@ class YarongServer(YarongNode):
 
     def close(self):
         import time
-        print("Closing....")
+        debug("Closing....")
         self.close_all_client_sockets()
         self.socket.close()
 
