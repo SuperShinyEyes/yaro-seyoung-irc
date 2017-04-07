@@ -19,6 +19,7 @@ class YarongServer(YarongNode):
         self.client_sockets = {}
         self.num_nodes = num_nodes
         self.init_socket_bind()
+        self.username = "ADMINISTRATOR"
 
 
 

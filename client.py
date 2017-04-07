@@ -9,6 +9,7 @@ Our project is a simple IRC program implemented using Python 3.x
 """
 #!/usr/bin/env python3
 from yarong import *
+import sys
 
 class YarongClient(YarongNode):
 
@@ -35,7 +36,10 @@ class YarongClient(YarongNode):
         if self.is_quitting(message):
             self.quit()
             return
+        else:
+            self.send_message(message)
 
+    def send_message(self, message):
         try :
             #Set the whole string
             self.socket.sendall(message.encode())
@@ -76,6 +80,23 @@ class YarongClient(YarongNode):
         with open(file_path) as f:
             print(f.read())
 
+    def set_username(self):
+        while True:
+            username = input(">>> Type in your username in lowercase alphanumeric. Must be at least 5 characters.\n")
+            self.send_message(message)
+            ready = select.select([self.socket, sys.stdin], [], [], self.listner_socket_timeout_in_sec)
+
+            if not ready[0]:
+                # print("No data nor input")
+                continue
+
+            data_source = ready[0][0]
+
+            if self.is_user_input(data_source):
+                self.parse_user_input()
+            else:
+                self.parse_message()
+
 
     def listen(self):
 
@@ -108,6 +129,14 @@ class YarongClient(YarongNode):
 
 
 
-if __name__ == "__main__":
-    yarongClient = YarongClient()
+def main():
+    yarongClient = None
+    if len(sys.argv) > 1:
+        ip = sys.argv[1]
+        yarongClient = YarongClient(host_ip=ip)
+    else:
+        yarongClient = YarongClient()
     yarongClient.run()
+
+if __name__ == "__main__":
+    main()

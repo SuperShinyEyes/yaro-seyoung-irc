@@ -36,6 +36,7 @@ class YarongNode(object):
         self.listner_socket_timeout_in_sec = timeout_in_sec
         self.close_delay_in_sec = timeout_in_sec + 1
         self.socket = None
+        self.username = None
 
     def create_socket(self):
         try:
@@ -64,3 +65,4 @@ class YarongSessionSocket(object):
         self.socket = socket
         self.address = address[0]
         self.port = address[1]
+        self.username = None
