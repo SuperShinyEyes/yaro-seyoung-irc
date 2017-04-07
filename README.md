@@ -13,6 +13,12 @@ Aalto CS Computer Network project.
     - Front-end
     - Documentations
 
+## Functionalities
+- Cloud service on DigitalOcean @ 178.62.226.63:8888
+- Nicknames
+- Error handling
+- Careful socket termination
+
 ## Project Management
 [![Trello](/images/trello.png)](https://trello.com/b/DqWXoP5o/yarong)
 
