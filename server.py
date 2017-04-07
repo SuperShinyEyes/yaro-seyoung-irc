@@ -1,9 +1,13 @@
 """
-Yaroslav Getman 473475
-Seyoung Park 217495
-17.03.2017
+server.py
+Created by
+    Yaroslav Getman 473475
+    Seyoung Park 217495
+on 6th.April.2017.
 
 Our project is a simple IRC program implemented using Python3
+
+    python3 server.py
 """
 #!/usr/bin/env python3
 from yarong import *

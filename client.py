@@ -8,7 +8,7 @@ on 6th.April.2017.
 Our project is a simple IRC program implemented using Python 3.x
 For cloud server connection, connect to 178.62.226.63(DigitalOcean VPS):
 
-    python3 client.py 178.62.226.63
+    python3 client.py
 
 """
 #!/usr/bin/env python3
@@ -93,6 +93,10 @@ class YarongClient(YarongNode):
         print("\n[[[[!!ALERT!!]]]]\n{:s}\n".format(msg))
 
     def is_valid_username(self, username):
+        '''
+        Valids: kokoro, henri, yama123
+        Invalids: #$%asdfa, l, fu
+        '''
         if len(username) >= 5 and username.isalnum():
             return True
 
