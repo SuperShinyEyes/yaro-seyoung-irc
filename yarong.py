@@ -15,14 +15,24 @@ import select
 """
 Constants for commands.
 """
-CLOSE_MSG='/close'      # Server shuts down
-QUIT_MSG = '/quit'      # Client leaves
+CLOSE_CMD='/close'      # Server shuts down
+QUIT_CMD = '/quit'      # Client leaves
+NICKNAME_CMD = '/nickname'
+
+ACCEPT_REPLY = '/accept'
 
 class CloseYarong(Exception):
     pass
     '''
     Used in client to end the session.
-    It's raised by CLOSE_MSG sent by server.
+    It's raised by CLOSE_CMD sent by server.
+    '''
+
+class UsernameSettingError(Exception):
+    pass
+    '''
+    Used in client to end the session.
+    It's raised by CLOSE_CMD sent by server.
     '''
 
 class YarongNode(object):

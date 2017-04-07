@@ -6,6 +6,10 @@ Created by
 on 6th.April.2017.
 
 Our project is a simple IRC program implemented using Python 3.x
+For cloud server connection, connect to 178.62.226.63(DigitalOcean VPS):
+
+    python3 client.py 178.62.226.63
+
 """
 #!/usr/bin/env python3
 from yarong import *
@@ -29,7 +33,7 @@ class YarongClient(YarongNode):
         return data_source == sys.stdin
 
     def is_quitting(self, msg):
-        return msg == QUIT_MSG
+        return msg == QUIT_CMD
 
     def parse_user_input(self):
         message = sys.stdin.readline().strip()
@@ -57,7 +61,7 @@ class YarongClient(YarongNode):
             self.prompt_message(data)
 
     def is_close_message(self, data):
-        return not data or data.decode() == CLOSE_MSG
+        return not data or data.decode() == CLOSE_CMD
 
     def close(self):
         '''
@@ -69,7 +73,7 @@ class YarongClient(YarongNode):
         raise CloseYarong
 
     def quit(self):
-        self.socket.sendall(QUIT_MSG.encode())
+        self.socket.sendall(QUIT_CMD.encode())
         self.close()
 
 
@@ -80,26 +84,52 @@ class YarongClient(YarongNode):
         with open(file_path) as f:
             print(f.read())
 
-    def set_username(self):
-        while True:
-            username = input(">>> Type in your username in lowercase alphanumeric. Must be at least 5 characters.\n")
-            self.send_message(message)
-            ready = select.select([self.socket, sys.stdin], [], [], self.listner_socket_timeout_in_sec)
+    def show_system_alert(self, msg):
+        print("\n[[[[!!ALERT!!]]]]\n{:s}\n".format(msg))
 
-            if not ready[0]:
-                # print("No data nor input")
+    def is_valid_username(self, username):
+        if len(username) >= 5 and username.isalnum():
+            return True
+
+        reply_too_short = "Too short. At least 5 characters."
+        reply_not_alphanumeric = "Accepts only alphabets and numbers"
+
+        if len(username) < 5 and not username.isalnum():
+            reply = reply_too_short + " " + reply_not_alphanumeric
+        elif not username.isalnum():
+            reply = reply_not_alphanumeric
+        elif len(username) < 5:
+            reply = reply_too_short
+
+        self.show_system_alert(reply)
+
+        return False
+
+
+    def set_username(self):
+        instruction = ">>> Type in your username in lowercase alphanumeric. Must be at least 5 characters.\n"
+        while True:
+            username = input(instruction)
+            if not self.is_valid_username(username):
                 continue
 
-            data_source = ready[0][0]
+            self.send_message("/nickname {:s}".format(username))
+            data = self.socket.recv(1024)
 
-            if self.is_user_input(data_source):
-                self.parse_user_input()
+            if not data:
+                raise UsernameSettingError
+
+            reply = data.decode()
+            if reply == ACCEPT_REPLY:
+                print("Accepted")
+                return username
             else:
-                self.parse_message()
+                print("Not Accepted")
+                instruction = reply
 
 
     def listen(self):
-
+        print("Welcome {:s}! Start a conversation!".format(self.username))
         while True:
             ready = select.select([self.socket, sys.stdin], [], [], self.listner_socket_timeout_in_sec)
 
@@ -117,6 +147,13 @@ class YarongClient(YarongNode):
 
     def run(self):
         self.welcome()
+        try:
+            self.username = self.set_username()
+        except KeyboardInterrupt:
+            self.quit()
+        except UsernameSettingError:
+            print("There was an error when setting a username.")
+            return
 
         try:
             self.listen()
@@ -131,12 +168,16 @@ class YarongClient(YarongNode):
 
 def main():
     yarongClient = None
+    ip = "localhost"
     if len(sys.argv) > 1:
         ip = sys.argv[1]
+
+    try:
         yarongClient = YarongClient(host_ip=ip)
+    except ConnectionRefusedError:
+        print("The server is not running.")
     else:
-        yarongClient = YarongClient()
-    yarongClient.run()
+        yarongClient.run()
 
 if __name__ == "__main__":
     main()

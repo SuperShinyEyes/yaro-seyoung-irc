@@ -14,7 +14,7 @@ class YarongServer(YarongNode):
     def __init__(self, num_nodes=6, host='', host_ip='localhost', host_port=8888, timeout_in_sec=2):
         super(YarongServer, self).__init__(host, host_ip, host_port, timeout_in_sec)
         '''
-        client_sockets = {speaker_socket: socket_pair}
+        client_sockets = {client_socket: session_properties}
         '''
         self.client_sockets = {}
         self.num_nodes = num_nodes
@@ -65,10 +65,10 @@ class YarongServer(YarongNode):
             for session_socket in self.client_sockets.values():
                 session_socket.socket.sendall(msg.encode())
 
-    def client_quits(self, speaker_socket, speaker_port):
-        self.close_client_connection(speaker_socket)
+    def client_quits(self, client_socket, client_port):
+        self.close_client_connection(client_socket)
 
-        msg = "Client %s left the channel." % (speaker_port)
+        msg = "Client %s left the channel." % (client_port)
         self.propagate_msg(msg)
         print(msg)
 
@@ -100,20 +100,49 @@ class YarongServer(YarongNode):
         self.socket.close()
 
     def is_client_quitting(self, msg):
-        return msg == QUIT_MSG
+        return msg == QUIT_CMD
+
+    def is_client_setting_username(self, msg):
+        return msg.split()[0] == NICKNAME_CMD
+
+    def is_username_unique(self, username):
+        client_usernames = [ss.username for ss in self.client_sockets.values()]
+        return username not in client_usernames
+
+    def set_client_username(self, msg, client_socket):
+        username = msg.split()[1]
+        reply = None
+
+        if not self.is_username_unique(username):
+            reply = "Username '{:s}' is already taken.'".format(username)
+        else:
+            self.client_sockets[client_socket].username = username
+            reply = ACCEPT_REPLY.encode()
+
+        client_socket.sendall(reply)
 
     def parse_client_message(self, client_socket):
         data = client_socket.recv(1024)
-        client_port = self.client_sockets[client_socket].port
+        client_username = self.client_sockets[client_socket].username
 
-        if not data or self.is_client_quitting(data.decode()):
+        if not data:
+            print("Data broken")
+            self.client_quits(client_socket, client_username)
+
+        data = data.decode()
+
+        if self.is_client_quitting(data):
             print("Client quits")
-            self.client_quits(client_socket, client_port)
+            self.client_quits(client_socket, client_username)
 
-        msg = '#%s:\n%s\n' % (client_port, data.decode())
+        elif self.is_client_setting_username(data):
+            self.set_client_username(data, client_socket)
 
-        print("propagate")
-        self.propagate_msg(msg, client_socket)
+        else:
+            msg = '@%s: %s\n' % (client_username, data)
+
+            print("propagate")
+            self.propagate_msg(msg, client_socket)
 
     def accept_client(self):
         print("New client")
