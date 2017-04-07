@@ -1,5 +1,5 @@
 # Yarong
-Aalto CS Computer Network project.
+Python3 ICR program(Server/Client). Aalto CS Computer Network project.
 
 ## Demo
 [![Demo](/images/demo.png)](https://youtu.be/uq_u5JwRQyc)
