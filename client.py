@@ -131,7 +131,7 @@ class YarongClient(YarongNode):
                 return username
             else:
                 debug("Not Accepted")
-                instruction = reply
+                print(reply)
 
 
     def listen(self):
@@ -152,6 +152,10 @@ class YarongClient(YarongNode):
 
 
     def run(self):
+        '''
+        First set username.
+        Then start a session
+        '''
         self.welcome()
         try:
             self.username = self.set_username()
@@ -188,6 +192,7 @@ def main():
         print("Running on localhost:8888")
 
 
+    # Is server running?
     try:
         yarongClient = YarongClient(host_ip=ip)
     except ConnectionRefusedError:

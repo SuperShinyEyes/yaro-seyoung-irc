@@ -28,7 +28,7 @@ ACCEPT_REPLY = '/accept'
 '''
 Debug constants
 '''
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 def debug(msg):
     if DEBUG_MODE:

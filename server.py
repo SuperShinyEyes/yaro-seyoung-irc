@@ -15,6 +15,9 @@ class YarongServer(YarongNode):
         super(YarongServer, self).__init__(host, host_ip, host_port, timeout_in_sec)
         '''
         client_sockets = {client_socket: session_properties}
+        client_sockets: Clients with username.
+        client_sockets_before_join: Clients with random username. They need to
+            enter their username in order to start a session.
         '''
         self.client_sockets = {}
         self.client_sockets_before_join = {}
@@ -83,6 +86,8 @@ class YarongServer(YarongNode):
     def close_client_connection(self, client_socket, close_all=False):
         client_socket.close()
 
+        # For entire client removal, it will be done in
+        # close_all_client_sockets()
         if not close_all:
             self.remove_client_from_db(client_socket)
 
@@ -103,7 +108,7 @@ class YarongServer(YarongNode):
 
     def close(self):
         import time
-        debug("Closing....")
+        print("Closing....")
         self.close_all_client_sockets()
         self.socket.close()
 
@@ -137,8 +142,7 @@ class YarongServer(YarongNode):
         reply = None
         debug("set_client_username: enter")
         if not self.is_username_unique(username):
-            debug("Username '{:s}' is already taken.'".format(username))
-            reply = "Username '{:s}' is already taken.'".format(username)
+            reply = "Username '{:s}' is already taken.".format(username)
         else:
             self.client_sockets_before_join[client_socket].username = username
             if not self.is_client_socket_already_joined(client_socket):
@@ -166,7 +170,7 @@ class YarongServer(YarongNode):
         data = data.decode()
 
         if self.is_client_quitting(data):
-            print("Client quits")
+            debug("Client quits")
             self.client_quits(client_socket, client_username)
 
         elif self.is_client_setting_username(data):
