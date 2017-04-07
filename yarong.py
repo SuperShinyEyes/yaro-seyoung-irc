@@ -12,6 +12,9 @@ import socket
 import sys
 import select
 
+import random
+random.seed()
+
 """
 Constants for commands.
 """
@@ -20,6 +23,16 @@ QUIT_CMD = '/quit'      # Client leaves
 NICKNAME_CMD = '/nickname'
 
 ACCEPT_REPLY = '/accept'
+
+
+'''
+Debug constants
+'''
+DEBUG_MODE = True
+
+def debug(msg):
+    if DEBUG_MODE:
+        print(msg)
 
 class CloseYarong(Exception):
     pass
@@ -67,6 +80,8 @@ class YarongNode(object):
         pass
 
 
+
+
 class YarongSessionSocket(object):
     """
     Pair of socket for one server-client session.
@@ -75,4 +90,7 @@ class YarongSessionSocket(object):
         self.socket = socket
         self.address = address[0]
         self.port = address[1]
-        self.username = None
+        self.username = self.generate_username()
+
+    def generate_username(self):
+        return "USER-{:d}".format(random.randint(1000000, 9999999))

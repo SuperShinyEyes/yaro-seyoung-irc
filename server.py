@@ -17,6 +17,7 @@ class YarongServer(YarongNode):
         client_sockets = {client_socket: session_properties}
         '''
         self.client_sockets = {}
+        self.client_sockets_before_join = {}
         self.num_nodes = num_nodes
         self.init_socket_bind()
         self.username = "ADMINISTRATOR"
@@ -91,7 +92,7 @@ class YarongServer(YarongNode):
         The key-value system is for easy-finding for removing/closing
         a session.
         '''
-        self.client_sockets[session_socket.socket] = session_socket
+        self.client_sockets_before_join[session_socket.socket] = session_socket
 
     def close(self):
         import time
@@ -109,21 +110,47 @@ class YarongServer(YarongNode):
         client_usernames = [ss.username for ss in self.client_sockets.values()]
         return username not in client_usernames
 
+    def is_client_socket_already_joined(self, client_socket):
+        return client_socket in self.client_sockets
+
+    def join_client_socket(self, client_socket):
+        debug("Join!")
+        self.client_sockets[client_socket] = \
+            self.client_sockets_before_join[client_socket]
+        self.client_sockets_before_join.pop(client_socket, None)
+
+    def update_client_username(self, client_socket, username):
+        if client_socket in self.client_sockets:
+            self.client_sockets[client_socket].username = username
+        else:
+            self.client_sockets_before_join[client_socket].username = username
+
     def set_client_username(self, msg, client_socket):
         username = msg.split()[1]
         reply = None
-
+        debug("set_client_username: enter")
         if not self.is_username_unique(username):
+            debug("Username '{:s}' is already taken.'".format(username))
             reply = "Username '{:s}' is already taken.'".format(username)
         else:
-            self.client_sockets[client_socket].username = username
-            reply = ACCEPT_REPLY.encode()
+            self.client_sockets_before_join[client_socket].username = username
+            if not self.is_client_socket_already_joined(client_socket):
+                self.join_client_socket(client_socket)
+            else:
+                debug("{:s} has already joined")
+            reply = ACCEPT_REPLY
+        debug("set_client_username: send")
+        client_socket.sendall(reply.encode())
 
-        client_socket.sendall(reply)
+    def get_client_username(self, client_socket):
+        if client_socket in self.client_sockets:
+            return self.client_sockets[client_socket].username
+        else:
+            return self.client_sockets_before_join[client_socket].username
 
     def parse_client_message(self, client_socket):
         data = client_socket.recv(1024)
-        client_username = self.client_sockets[client_socket].username
+        client_username = self.get_client_username(client_socket)
 
         if not data:
             print("Data broken")
@@ -136,6 +163,7 @@ class YarongServer(YarongNode):
             self.client_quits(client_socket, client_username)
 
         elif self.is_client_setting_username(data):
+            debug("User wants to set nick")
             self.set_client_username(data, client_socket)
 
         else:
@@ -176,11 +204,11 @@ class YarongServer(YarongNode):
             without a file descriptor becoming ready, three empty lists are
             returned.
             '''
-            rlist = sockets + list(self.client_sockets.keys())
+            rlist = sockets + list(self.client_sockets.keys()) + list(self.client_sockets_before_join.keys())
             ready = select.select(rlist, [], [], self.listner_socket_timeout_in_sec)
             #Receiving from client
             if not ready[0]:
-                print("No msg")
+                # debug("No msg")
                 continue
 
             socket = ready[0][0]
@@ -188,6 +216,7 @@ class YarongServer(YarongNode):
                 self.accept_client()
 
             else:
+                debug("Got a msg")
                 self.parse_client_message(socket)
 
     def run(self):

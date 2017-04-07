@@ -114,6 +114,7 @@ class YarongClient(YarongNode):
                 continue
 
             self.send_message("/nickname {:s}".format(username))
+            debug("Receiving reply...")
             data = self.socket.recv(1024)
 
             if not data:
@@ -121,10 +122,10 @@ class YarongClient(YarongNode):
 
             reply = data.decode()
             if reply == ACCEPT_REPLY:
-                print("Accepted")
+                debug("Accepted")
                 return username
             else:
-                print("Not Accepted")
+                debug("Not Accepted")
                 instruction = reply
 
 
@@ -171,6 +172,7 @@ def main():
     ip = "localhost"
     if len(sys.argv) > 1:
         ip = sys.argv[1]
+        debug("ip: {:s}".format(ip))
 
     try:
         yarongClient = YarongClient(host_ip=ip)
