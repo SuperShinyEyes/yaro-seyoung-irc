@@ -18,7 +18,7 @@ class Command(object):
 similar to cmd.Cmd in standard library
 just extend with do_something  method to handle your commands"""
 
-    def __init__(self,quit_commands=['q','quit','exit'], help_commands=['help','?', 'h']):
+    def __init__(self,quit_commands=['q','quit','exit', '/quit'], help_commands=['help','?', 'h']):
         self._quit_cmd=quit_commands
         self._help_cmd=help_commands
 
@@ -152,9 +152,12 @@ You can also asynchronously output messages with Commander.output('message') """
         self.eloop=None
         self.yarongClient = None
         try:
-            self.yarongClient = YarongClient(self.output, host_ip='178.62.226.63')
+            # self.yarongClient = YarongClient(self.output, host_ip='178.62.226.63')
+            self.yarongClient = YarongClient(self.output, host_ip='localhost')
         except ConnectionRefusedError:
             print("The server is not running.")
+        except KeyboardInterrupt:
+            self.yarongClient.quit()
         # else:
         #     self.yarongClient.run()
 
@@ -168,21 +171,21 @@ You can also asynchronously output messages with Commander.output('message') """
         self.output("YOU: {:s}".format(line))
         self.yarongClient.send_message(line)
     # def on_line_entered(self,line):
-    #     if self._cmd:
-    #         try:
-    #             res = self._cmd(line)
-    #         except Exception as e:
-    #             self.output('Error: %s'%e, 'error')
-    #             return
-    #         if res==Commander.Exit:
-    #             raise urwid.ExitMainLoop()
-    #         elif res:
-    #             self.output(str(res))
-    #     else:
-    #         if line in ('q','quit','exit'):
-    #             raise urwid.ExitMainLoop()
-    #         else:
-    #             self.output(line)
+        if self._cmd:
+            try:
+                res = self._cmd(line)
+            except Exception as e:
+                self.output('Error: %s'%e, 'error')
+                return
+            if res==Commander.Exit:
+                raise urwid.ExitMainLoop()
+            elif res:
+                self.output(str(res))
+        else:
+            if line in ('q','quit','exit'):
+                raise urwid.ExitMainLoop()
+            else:
+                self.output(line)
 
     def output(self, line, style=None):
         if style and style in self._output_styles:

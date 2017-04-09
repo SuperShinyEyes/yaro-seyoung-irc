@@ -16,18 +16,17 @@ class YarongClientListenerThread(threading.Thread):
         self.output = kwargs["output"]
 
     def is_session_close(self, data):
-        return data == CLOSE_MSG
+        return data == CLOSE_CMD
 
     def prompt_message(self, encoded_msg):
         logging.debug(encoded_msg.decode())
 
     def run(self):
         #Sending message to client_connected client
-        self.socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
-        self.output("Set start!")
+        # self.socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
+        # self.output("Set start!")
         #infinite loop so that function do not terminate and thread do not end.
         while not self.threads_stop_event.is_set():
-            self.output("Set!")
             ready = select.select([self.socket], [], [], self.client.listner_socket_timeout_in_sec)
 
             if self.threads_stop_event.is_set():
@@ -52,6 +51,8 @@ class YarongClientListenerThread(threading.Thread):
 
             data = data.decode()
             # self.prompt_message(data)
+            if len(data) > 0 and data[-1] == "\n":
+                data = data[:-1]
             self.output(data)
 
         #came out of loop
