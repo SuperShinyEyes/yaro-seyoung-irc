@@ -24,9 +24,10 @@ class YarongClientListenerThread(threading.Thread):
     def run(self):
         #Sending message to client_connected client
         self.socket.sendall('Welcome to the server. Type something and hit enter\n'.encode())
-
+        self.output("Set start!")
         #infinite loop so that function do not terminate and thread do not end.
         while not self.threads_stop_event.is_set():
+            self.output("Set!")
             ready = select.select([self.socket], [], [], self.client.listner_socket_timeout_in_sec)
 
             if self.threads_stop_event.is_set():

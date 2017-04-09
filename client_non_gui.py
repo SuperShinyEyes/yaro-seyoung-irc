@@ -13,18 +13,14 @@ For cloud server connection, connect to 178.62.226.63(DigitalOcean VPS):
 """
 #!/usr/bin/env python3
 from yarong import *
-from YarongClientListenerThread import YarongClientListenerThread
 import sys
-import threading
 
 class YarongClient(YarongNode):
 
     """IRC client"""
-    def __init__(self, output, host='', host_ip='localhost', host_port=8888, timeout_in_sec=2):
+    def __init__(self, host='', host_ip='localhost', host_port=8888, timeout_in_sec=2):
         super(YarongClient, self).__init__(host, host_ip, host_port, timeout_in_sec)
         self.init_socket_connect()
-        self.threads_stop_event = threading.Event()
-        self.set_listener_thread(output)
 
     def init_socket_connect(self):
         self.socket = self.create_socket()
@@ -38,15 +34,6 @@ class YarongClient(YarongNode):
 
     def is_quitting(self, msg):
         return msg == QUIT_CMD
-
-    def set_listener_thread(self, output):
-        listener_thread_kwargs = {
-        "socket":self.socket, "event": self.threads_stop_event,
-        "client": self, "other_client_port": self.host_port,
-        "output": output
-        }
-        listener_thread = YarongClientListenerThread(kwargs=listener_thread_kwargs)
-        listener_thread.start()
 
     def parse_user_input(self):
         message = sys.stdin.readline().strip()

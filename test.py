@@ -152,7 +152,7 @@ You can also asynchronously output messages with Commander.output('message') """
         self.eloop=None
         self.yarongClient = None
         try:
-            self.yarongClient = YarongClient(host_ip='178.62.226.63')
+            self.yarongClient = YarongClient(self.output, host_ip='178.62.226.63')
         except ConnectionRefusedError:
             print("The server is not running.")
         # else:
@@ -163,8 +163,9 @@ You can also asynchronously output messages with Commander.output('message') """
         self._eloop_thread=threading.current_thread()
         self.eloop.run()
 
+
     def on_line_entered(self,line):
-        self.output("YOU: ".format(line))
+        self.output("YOU: {:s}".format(line))
         self.yarongClient.send_message(line)
     # def on_line_entered(self,line):
     #     if self._cmd:
