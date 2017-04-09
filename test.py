@@ -7,6 +7,7 @@ import urwid
 from collections import deque
 from threading import Thread
 import threading
+from client import YarongClient
 
 class UnknownCommand(Exception):
     def __init__(self,cmd):
@@ -149,6 +150,13 @@ You can also asynchronously output messages with Commander.output('message') """
         self._cmd=cmd_cb
         self._output_styles=[s[0] for s in self.PALLETE]
         self.eloop=None
+        self.yarongClient = None
+        try:
+            self.yarongClient = YarongClient(host_ip='178.62.226.63')
+        except ConnectionRefusedError:
+            print("The server is not running.")
+        # else:
+        #     self.yarongClient.run()
 
     def loop(self, handle_mouse=False):
         self.eloop=urwid.MainLoop(self, self.PALLETE, handle_mouse=handle_mouse)
@@ -156,7 +164,8 @@ You can also asynchronously output messages with Commander.output('message') """
         self.eloop.run()
 
     def on_line_entered(self,line):
-        self.output("entered")
+        self.output("YOU: ".format(line))
+        self.yarongClient.send_message(line)
     # def on_line_entered(self,line):
     #     if self._cmd:
     #         try:
@@ -211,14 +220,14 @@ if __name__=='__main__':
     c=Commander('Test', cmd_cb=TestCmd())
 
     #Test asynch output -  e.g. comming from different thread
-    import time
-    def run():
-        while True:
-            time.sleep(1)
-            c.output('Tick', 'green')
-    t=Thread(target=run)
-    t.daemon=True
-    t.start()
+    # import time
+    # def run():
+    #     while True:
+    #         time.sleep(1)
+    #         c.output('Tick', 'green')
+    # t=Thread(target=run)
+    # t.daemon=True
+    # t.start()
 
     #start main loop
     c.loop()
