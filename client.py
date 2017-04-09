@@ -25,6 +25,8 @@ class YarongClient(YarongNode):
         self.init_socket_connect()
         self.threads_stop_event = threading.Event()
         self.set_listener_thread(output)
+        self.output = output
+        self.welcome()
 
     def init_socket_connect(self):
         self.socket = self.create_socket()
@@ -100,7 +102,8 @@ class YarongClient(YarongNode):
         dir_path = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(dir_path, 'welcome_msg')
         with open(file_path) as f:
-            print(f.read())
+            self.output(f.read())
+            # print(f.read())
 
     def show_system_alert(self, msg):
         print("\n[[[[!!ALERT!!]]]]\n{:s}\n".format(msg))

@@ -108,7 +108,8 @@ class YarongServer(YarongNode):
         The key-value system is for easy-finding for removing/closing
         a session.
         '''
-        self.client_sockets_before_join[session_socket.socket] = session_socket
+        # self.client_sockets_before_join[session_socket.socket] = session_socket
+        self.client_sockets[session_socket.socket] = session_socket
 
     def close(self):
         import time
