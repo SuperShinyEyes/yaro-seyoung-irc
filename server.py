@@ -152,10 +152,12 @@ class YarongServer(YarongNode):
         if not self.is_username_unique(username):
             reply = "Username '{:s}' is already taken.".format(username)
         else:
-            self.client_sockets_before_join[client_socket].username = username
+
             if not self.is_client_socket_already_joined(client_socket):
+                self.client_sockets_before_join[client_socket].username = username
                 self.join_client_socket(client_socket)
             else:
+                self.client_sockets[client_socket].username = username
                 debug("{:s} has already joined")
             reply = ACCEPT_REPLY
         debug("set_client_username: send")
