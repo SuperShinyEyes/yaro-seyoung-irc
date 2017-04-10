@@ -120,7 +120,11 @@ class YarongServer(YarongNode):
         return msg == QUIT_CMD
 
     def is_client_setting_username(self, msg):
-        return msg.split()[0] == NICKNAME_CMD
+        msg_split_by_space = msg.split()
+        if msg_split_by_space:
+            return msg_split_by_space[0] == NICKNAME_CMD
+        else:
+            return False
 
     def is_username_unique(self, username):
         client_usernames = [ss.username for ss in self.client_sockets.values()]
